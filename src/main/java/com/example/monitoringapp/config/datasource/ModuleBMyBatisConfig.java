@@ -16,7 +16,7 @@ import javax.sql.DataSource;
 @Profile("local")
 @Configuration
 @MapperScan(
-        basePackages = "com.example.monitoringapp.db.moduleb.mapper",
+        basePackages = "com.example.monitoringapp.task.repository.moduleb",
         sqlSessionFactoryRef = "moduleBSqlSessionFactory",
         sqlSessionTemplateRef = "moduleBSqlSessionTemplate"
 )
