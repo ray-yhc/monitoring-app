@@ -136,6 +136,13 @@ public class MonitoringTaskPageController {
         return "redirect:/tasks";
     }
 
+    @PostMapping("/{taskId}/activate")
+    public String activateTask(@PathVariable Long taskId, RedirectAttributes redirectAttributes) {
+        monitoringTaskCommandService.activate(taskId);
+        redirectAttributes.addFlashAttribute("message", "Task activated.");
+        return "redirect:/tasks";
+    }
+
     @GetMapping("/{taskId}/histories")
     public String taskHistories(@PathVariable Long taskId, @RequestParam(defaultValue = "0") Integer page, @RequestParam(defaultValue = "20") Integer size, Model model) {
         model.addAttribute("task", monitoringTaskQueryService.getTask(taskId));

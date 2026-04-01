@@ -74,10 +74,16 @@
                                 Run Now
                             </button>
                         </form>
-                        <form th:action="@{|/tasks/${task.taskId}/delete|}" method="post" class="inline">
+                        <form th:if="${task.activeYn == 'Y'}" th:action="@{|/tasks/${task.taskId}/delete|}" method="post" class="inline">
                             <button type="submit"
                                     class="text-xs px-2 py-1 rounded bg-red-100 hover:bg-red-200 text-red-600 transition cursor-pointer">
                                 Deactivate
+                            </button>
+                        </form>
+                        <form th:if="${task.activeYn != 'Y'}" th:action="@{|/tasks/${task.taskId}/activate|}" method="post" class="inline">
+                            <button type="submit"
+                                    class="text-xs px-2 py-1 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-700 transition cursor-pointer">
+                                Activate
                             </button>
                         </form>
                     </div>

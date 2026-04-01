@@ -64,6 +64,11 @@ public class MonitoringTaskRestController {
         monitoringTaskCommandService.deactivate(taskId);
     }
 
+    @PostMapping("/{taskId}/activate")
+    public void activateTask(@PathVariable Long taskId) {
+        monitoringTaskCommandService.activate(taskId);
+    }
+
     @PostMapping("/{taskId}/restart")
     public TaskExecutionResult restartTask(@PathVariable Long taskId) {
         return monitoringTaskExecutionService.executeNow(taskId);

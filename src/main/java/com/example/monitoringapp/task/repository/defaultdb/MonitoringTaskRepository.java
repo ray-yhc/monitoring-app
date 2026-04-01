@@ -137,6 +137,15 @@ public interface MonitoringTaskRepository {
     @Update("""
             update tb_mon_task_m
             set
+                active_yn = 'Y',
+                fnl_upt_dtm = #{updatedAt}
+            where task_id = #{taskId}
+            """)
+    int activate(@Param("taskId") Long taskId, @Param("updatedAt") LocalDateTime updatedAt);
+
+    @Update("""
+            update tb_mon_task_m
+            set
                 last_exec_dtm = #{executedAt},
                 last_exec_rslt = #{lastExecRslt},
                 last_exec_rslt_msg = #{lastExecRsltMsg},

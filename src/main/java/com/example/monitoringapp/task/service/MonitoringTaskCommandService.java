@@ -71,4 +71,9 @@ public class MonitoringTaskCommandService {
         monitoringTaskQueryService.getTaskDomain(taskId);
         monitoringTaskRepository.deactivate(taskId, LocalDateTime.now());
     }
+
+    public void activate(Long taskId) {
+        monitoringTaskQueryService.getTaskDomain(taskId);
+        monitoringTaskRepository.activate(taskId, LocalDateTime.now());
+    }
 }
