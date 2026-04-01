@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Task Histories</title>
+    <style>
+        body { font-family: "Segoe UI", sans-serif; margin: 32px; background: #f4f7fb; }
+        table { width: 100%; border-collapse: collapse; background: #fff; }
+        th, td { border: 1px solid #dbe2ea; padding: 10px; vertical-align: top; }
+        th { background: #16324f; color: #fff; }
+        pre { margin: 0; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+<p><a href="/tasks">Back to List</a> | <a th:href="@{|/tasks/${task.taskId}|}">Back to Detail</a></p>
+<h1 th:text="${task.taskNm + ' History'}"></h1>
+<table>
+    <thead>
+    <tr>
+        <th>Executed At</th>
+        <th>Trigger</th>
+        <th>Result</th>
+        <th>Message</th>
+        <th>Result Data</th>
+        <th>Alert</th>
+        <th>Duration(ms)</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="history : ${historyPage.contents}">
+        <td th:text="${history.execDtm}"></td>
+        <td th:text="${history.execTrgTypeCd}"></td>
+        <td th:text="${history.execRslt}"></td>
+        <td th:text="${history.execRsltMsg}"></td>
+        <td><pre th:text="${history.execRsltData}"></pre></td>
+        <td th:text="${history.alertEventType}"></td>
+        <td th:text="${history.execDurMs}"></td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>

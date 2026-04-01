@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Task Form</title>
+    <style>
+        body { font-family: "Segoe UI", sans-serif; margin: 32px; background: #f6f8fb; }
+        form { max-width: 980px; background: #fff; padding: 24px; }
+        label { display: block; margin-top: 12px; font-weight: 600; }
+        input, select, textarea { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+        textarea { min-height: 180px; font-family: Consolas, monospace; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .errors { color: #b42318; margin-bottom: 12px; }
+        .actions { margin-top: 16px; display: flex; gap: 12px; }
+        .example { background: #0f172a; color: #e2e8f0; padding: 12px; margin-top: 20px; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+<h1 th:if="${formMode == 'create'}">Create Task</h1>
+<h1 th:if="${formMode != 'create'}">Edit Task</h1>
+
+<form method="post" th:object="${taskForm}" th:attr="action=${formAction}">
+
+    <div class="errors" th:if="${#fields.hasAnyErrors()}">
+        <div th:each="error : ${#fields.errors('*')}" th:text="${error}"></div>
+    </div>
+
+    <input type="hidden" th:if="${taskForm.taskId != null}" th:field="*{taskId}">
+
+    <label for="taskNm">Task Name</label>
+    <input id="taskNm" type="text" th:field="*{taskNm}">
+
+    <div class="row">
+        <div>
+            <label for="taskTypeCd">Task Type</label>
+            <select id="taskTypeCd" th:field="*{taskTypeCd}">
+                <option value="URL_HEALTH_CHECK">URL_HEALTH_CHECK</option>
+                <option value="URL_RESPONSE_CHECK">URL_RESPONSE_CHECK</option>
+                <option value="DB_QUERY_CHECK">DB_QUERY_CHECK</option>
+                <option value="ES_LOG_CHECK">ES_LOG_CHECK</option>
+                <option value="PROM_QL_CHECK">PROM_QL_CHECK</option>
+            </select>
+        </div>
+        <div>
+            <label for="activeYn">Active</label>
+            <select id="activeYn" th:field="*{activeYn}">
+                <option value="Y">Y</option>
+                <option value="N">N</option>
+            </select>
+        </div>
+    </div>
+
+    <label for="taskCntnt">Description</label>
+    <input id="taskCntnt" type="text" th:field="*{taskCntnt}">
+
+    <div class="row">
+        <div>
+            <label for="scheduleVal">Cron</label>
+            <input id="scheduleVal" type="text" th:field="*{scheduleVal}" placeholder="0 * * * * *">
+        </div>
+        <div>
+            <label for="taskPrio">Priority</label>
+            <input id="taskPrio" type="number" th:field="*{taskPrio}">
+        </div>
+    </div>
+
+    <label for="execParam">Execution Param JSON</label>
+    <textarea id="execParam" th:field="*{execParam}"></textarea>
+
+    <label for="successParam">Success Param JSON</label>
+    <textarea id="successParam" th:field="*{successParam}"></textarea>
+
+    <div class="actions">
+        <button type="submit">Save</button>
+        <a href="/tasks">Back to List</a>
+    </div>
+</form>
+
+<h2>JSON Examples</h2>
+<div th:each="entry : ${taskTypeExamples}">
+    <h3 th:text="${entry.key}"></h3>
+    <div class="example" th:text="${entry.value}"></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Task Detail</title>
+    <style>
+        body { font-family: "Segoe UI", sans-serif; margin: 32px; background: #f4f7fb; }
+        .card { background: #fff; padding: 24px; margin-bottom: 20px; }
+        pre { background: #0f172a; color: #e2e8f0; padding: 12px; overflow: auto; }
+        table { width: 100%; border-collapse: collapse; background: #fff; }
+        th, td { border: 1px solid #dbe2ea; padding: 10px; }
+        th { background: #16324f; color: #fff; }
+    </style>
+</head>
+<body>
+<p><a href="/tasks">Back to List</a></p>
+<h1 th:text="${task.taskNm}"></h1>
+<div class="card">
+    <p><strong>ID:</strong> <span th:text="${task.taskId}"></span></p>
+    <p><strong>Type:</strong> <span th:text="${task.taskTypeCd}"></span></p>
+    <p><strong>Description:</strong> <span th:text="${task.taskCntnt}"></span></p>
+    <p><strong>Cron:</strong> <span th:text="${task.scheduleVal}"></span></p>
+    <p><strong>Priority:</strong> <span th:text="${task.taskPrio}"></span></p>
+    <p><strong>Active:</strong> <span th:text="${task.activeYn}"></span></p>
+    <p><strong>Last Executed:</strong> <span th:text="${task.lastExecDtm}"></span></p>
+    <p><strong>Last Result:</strong> <span th:text="${task.lastExecRslt}"></span></p>
+    <p><strong>Last Message:</strong> <span th:text="${task.lastExecRsltMsg}"></span></p>
+</div>
+<div class="card">
+    <h2>Execution Param</h2>
+    <pre th:text="${task.execParam}"></pre>
+    <h2>Success Param</h2>
+    <pre th:text="${task.successParam}"></pre>
+</div>
+<div class="card">
+    <h2>Recent History</h2>
+    <table>
+        <thead>
+        <tr>
+            <th>Executed At</th>
+            <th>Trigger</th>
+            <th>Result</th>
+            <th>Message</th>
+            <th>Alert</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="history : ${histories.contents}">
+            <td th:text="${history.execDtm}"></td>
+            <td th:text="${history.execTrgTypeCd}"></td>
+            <td th:text="${history.execRslt}"></td>
+            <td th:text="${history.execRsltMsg}"></td>
+            <td th:text="${history.alertEventType}"></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

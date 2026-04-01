@@ -3,22 +3,44 @@ spring:
     name: monitoring-app
   datasource:
     default:
-      jdbc-url: jdbc:postgresql://localhost:5432/postgres
-      username: postgres
-      password: qwer
+      jdbc-url: ${DEFAULT_DB_URL:jdbc:postgresql://localhost:5432/postgres}
+      username: ${DEFAULT_DB_USERNAME:postgres}
+      password: ${DEFAULT_DB_PASSWORD:qwer}
       driver-class-name: org.postgresql.Driver
     module-a:
-      jdbc-url: jdbc:postgresql://localhost:5432/module_a_db
-      username: postgres
-      password: qwer
+      jdbc-url: ${MODULE_A_DB_URL:jdbc:postgresql://localhost:5432/module_a_db}
+      username: ${MODULE_A_DB_USERNAME:postgres}
+      password: ${MODULE_A_DB_PASSWORD:qwer}
       driver-class-name: org.postgresql.Driver
     module-b:
-      jdbc-url: jdbc:postgresql://localhost:5432/module_b_db
-      username: postgres
-      password: qwer
+      jdbc-url: ${MODULE_B_DB_URL:jdbc:postgresql://localhost:5432/module_b_db}
+      username: ${MODULE_B_DB_USERNAME:postgres}
+      password: ${MODULE_B_DB_PASSWORD:qwer}
       driver-class-name: org.postgresql.Driver
     module-c:
-      jdbc-url: jdbc:postgresql://localhost:5432/module_c_db
-      username: postgres
-      password: qwer
+      jdbc-url: ${MODULE_C_DB_URL:jdbc:postgresql://localhost:5432/module_c_db}
+      username: ${MODULE_C_DB_USERNAME:postgres}
+      password: ${MODULE_C_DB_PASSWORD:qwer}
       driver-class-name: org.postgresql.Driver
+  security:
+    user:
+      name: ${MONITORING_APP_USER:admin}
+      password: ${MONITORING_APP_PASSWORD:admin1234}
+  thymeleaf:
+    cache: false
+
+monitoring:
+  scheduler:
+    enabled: true
+    cron: 0 * * * * *
+  execution:
+    default-timeout-ms: 5000
+    history-page-size: 20
+  alert:
+    enabled: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
