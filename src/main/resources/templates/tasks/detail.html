@@ -3,57 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <title>Task Detail</title>
-    <style>
-        body { font-family: "Segoe UI", sans-serif; margin: 32px; background: #f4f7fb; }
-        .card { background: #fff; padding: 24px; margin-bottom: 20px; }
-        pre { background: #0f172a; color: #e2e8f0; padding: 12px; overflow: auto; }
-        table { width: 100%; border-collapse: collapse; background: #fff; }
-        th, td { border: 1px solid #dbe2ea; padding: 10px; }
-        th { background: #16324f; color: #fff; }
-    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
-<body>
-<p><a href="/tasks">Back to List</a></p>
-<h1 th:text="${task.taskNm}"></h1>
-<div class="card">
-    <p><strong>ID:</strong> <span th:text="${task.taskId}"></span></p>
-    <p><strong>Type:</strong> <span th:text="${task.taskTypeCd}"></span></p>
-    <p><strong>Description:</strong> <span th:text="${task.taskCntnt}"></span></p>
-    <p><strong>Cron:</strong> <span th:text="${task.scheduleVal}"></span></p>
-    <p><strong>Priority:</strong> <span th:text="${task.taskPrio}"></span></p>
-    <p><strong>Active:</strong> <span th:text="${task.activeYn}"></span></p>
-    <p><strong>Last Executed:</strong> <span th:text="${task.lastExecDtm}"></span></p>
-    <p><strong>Last Result:</strong> <span th:text="${task.lastExecRslt}"></span></p>
-    <p><strong>Last Message:</strong> <span th:text="${task.lastExecRsltMsg}"></span></p>
-</div>
-<div class="card">
-    <h2>Execution Param</h2>
-    <pre th:text="${task.execParam}"></pre>
-    <h2>Success Param</h2>
-    <pre th:text="${task.successParam}"></pre>
-</div>
-<div class="card">
-    <h2>Recent History</h2>
-    <table>
-        <thead>
-        <tr>
-            <th>Executed At</th>
-            <th>Trigger</th>
-            <th>Result</th>
-            <th>Message</th>
-            <th>Alert</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="history : ${histories.contents}">
-            <td th:text="${history.execDtm}"></td>
-            <td th:text="${history.execTrgTypeCd}"></td>
-            <td th:text="${history.execRslt}"></td>
-            <td th:text="${history.execRsltMsg}"></td>
-            <td th:text="${history.alertEventType}"></td>
-        </tr>
-        </tbody>
-    </table>
-</div>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+<!-- Top Nav -->
+<header class="bg-slate-900 text-white px-8 py-4 flex items-center gap-4 shadow">
+    <a href="/tasks" class="text-slate-400 hover:text-white text-sm transition">← Task List</a>
+    <span class="text-slate-600">/</span>
+    <h1 class="text-lg font-bold" th:text="${task.taskNm}"></h1>
+</header>
+
+<main class="px-8 py-6 max-w-screen-lg mx-auto space-y-6">
+
+    <!-- Basic Info Card -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Task Info</h2>
+        <dl class="grid grid-cols-2 gap-x-8 gap-y-3 text-sm">
+            <div class="flex gap-2">
+                <dt class="text-slate-500 w-32 shrink-0">ID</dt>
+                <dd class="font-mono text-slate-700" th:text="${task.taskId}"></dd>
+            </div>
+            <div class="flex gap-2">
+                <dt class="text-slate-500 w-32 shrink-0">Type</dt>
+                <dd>
+                    <span class="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded font-mono" th:text="${task.taskTypeCd}"></span>
+                </dd>
+            </div>
+            <div class="flex gap-2 col-span-2">
+                <dt class="text-slate-500 w-32 shrink-0">Description</dt>
+                <dd class="text-slate-700" th:text="${task.taskCntnt}"></dd>
+            </div>
+            <div class="flex gap-2">
+                <dt class="text-slate-500 w-32 shrink-0">Cron</dt>
+                <dd class="font-mono text-slate-700" th:text="${task.scheduleVal}"></dd>
+            </div>
+            <div class="flex gap-2">
+                <dt class="text-slate-500 w-32 shrink-0">Priority</dt>
+                <dd th:text="${task.taskPrio}"></dd>
+            </div>
+            <div class="flex gap-2">
+                <dt class="text-slate-500 w-32 shrink-0">Active</dt>
+                <dd>
+                    <span th:if="${task.activeYn == 'Y'}"
+                          class="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">Y</span>
+                    <span th:if="${task.activeYn != 'Y'}"
+                          class="bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full" th:text="${task.activeYn}"></span>
+                </dd>
+            </div>
+            <div class="flex gap-2">
+                <dt class="text-slate-500 w-32 shrink-0">Last Executed</dt>
+                <dd class="text-slate-700" th:text="${task.lastExecDtm}"></dd>
+            </div>
+            <div class="flex gap-2">
+                <dt class="text-slate-500 w-32 shrink-0">Last Result</dt>
+                <dd th:text="${task.lastExecRslt}"
+                    th:classappend="${task.lastExecRslt == 'SUCCESS'} ? 'text-green-700 font-semibold' : 'text-red-600 font-semibold'"></dd>
+            </div>
+            <div class="flex gap-2 col-span-2">
+                <dt class="text-slate-500 w-32 shrink-0">Last Message</dt>
+                <dd class="text-slate-600 text-xs" th:text="${task.lastExecRsltMsg}"></dd>
+            </div>
+        </dl>
+    </div>
+
+    <!-- Params Card -->
+    <div class="bg-white rounded-lg shadow p-6 space-y-4">
+        <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Parameters</h2>
+
+        <div>
+            <p class="text-xs font-semibold text-slate-500 mb-1">Execution Param</p>
+            <pre class="bg-slate-900 text-slate-100 text-xs rounded p-4 overflow-auto leading-relaxed" th:text="${task.execParam}"></pre>
+        </div>
+        <div>
+            <p class="text-xs font-semibold text-slate-500 mb-1">Success Param</p>
+            <pre class="bg-slate-900 text-slate-100 text-xs rounded p-4 overflow-auto leading-relaxed" th:text="${task.successParam}"></pre>
+        </div>
+    </div>
+
+    <!-- Recent History Card -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">Recent History</h2>
+            <a th:href="@{|/tasks/${task.taskId}/histories|}"
+               class="text-xs text-blue-600 hover:underline">View All</a>
+        </div>
+        <table class="w-full text-sm">
+            <thead class="bg-slate-800 text-slate-100 text-xs uppercase tracking-wider">
+            <tr>
+                <th class="px-4 py-3 text-left">Executed At</th>
+                <th class="px-4 py-3 text-left">Trigger</th>
+                <th class="px-4 py-3 text-left">Result</th>
+                <th class="px-4 py-3 text-left">Message</th>
+                <th class="px-4 py-3 text-left">Alert</th>
+            </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+            <tr th:each="history : ${histories.contents}" class="hover:bg-slate-50 transition">
+                <td class="px-4 py-3 text-xs text-slate-500 font-mono" th:text="${history.execDtm}"></td>
+                <td class="px-4 py-3 text-xs">
+                    <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono" th:text="${history.execTrgTypeCd}"></span>
+                </td>
+                <td class="px-4 py-3 text-xs font-semibold"
+                    th:text="${history.execRslt}"
+                    th:classappend="${history.execRslt == 'SUCCESS'} ? 'text-green-700' : 'text-red-600'"></td>
+                <td class="px-4 py-3 text-xs text-slate-500 max-w-xs truncate" th:text="${history.execRsltMsg}"></td>
+                <td class="px-4 py-3 text-xs text-slate-500" th:text="${history.alertEventType}"></td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+</main>
 </body>
 </html>
