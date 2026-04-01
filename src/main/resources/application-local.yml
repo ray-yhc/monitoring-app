@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: monitoring-app
+  datasource:
+    default:
+      jdbc-url: jdbc:postgresql://localhost:5432/postgres
+      username: postgres
+      password: qwer
+      driver-class-name: org.postgresql.Driver
+    module-a:
+      jdbc-url: jdbc:postgresql://localhost:5432/module_a_db
+      username: postgres
+      password: qwer
+      driver-class-name: org.postgresql.Driver
+    module-b:
+      jdbc-url: jdbc:postgresql://localhost:5432/module_b_db
+      username: postgres
+      password: qwer
+      driver-class-name: org.postgresql.Driver
+    module-c:
+      jdbc-url: jdbc:postgresql://localhost:5432/module_c_db
+      username: postgres
+      password: qwer
+      driver-class-name: org.postgresql.Driver
