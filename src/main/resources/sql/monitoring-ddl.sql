@@ -16,7 +16,7 @@ create table if not exists tb_mon_task_m (
     constraint ck_tb_mon_task_m_active_yn check (active_yn in ('Y', 'N'))
 );
 
-create table if not exists tb_mon_task_hist_m (
+create table if not exists tb_mon_task_hist_l (
     task_hist_id bigint primary key,
     task_id bigint not null,
     exec_dtm timestamp not null,
@@ -28,7 +28,7 @@ create table if not exists tb_mon_task_hist_m (
     exec_dur_ms bigint not null,
     fst_reg_dtm timestamp not null,
     fnl_upt_dtm timestamp not null,
-    constraint fk_tb_mon_task_hist_m_task_id foreign key (task_id)
+    constraint fk_tb_mon_task_hist_l_task_id foreign key (task_id)
         references tb_mon_task_m(task_id)
 );
 
@@ -41,11 +41,11 @@ create index if not exists idx_tb_mon_task_m_02
 create index if not exists idx_tb_mon_task_m_03
     on tb_mon_task_m(last_exec_rslt);
 
-create index if not exists idx_tb_mon_task_hist_m_01
-    on tb_mon_task_hist_m(task_id, exec_dtm desc);
+create index if not exists idx_tb_mon_task_hist_l_01
+    on tb_mon_task_hist_l(task_id, exec_dtm desc);
 
-create index if not exists idx_tb_mon_task_hist_m_02
-    on tb_mon_task_hist_m(exec_dtm desc);
+create index if not exists idx_tb_mon_task_hist_l_02
+    on tb_mon_task_hist_l(exec_dtm desc);
 
-create index if not exists idx_tb_mon_task_hist_m_03
-    on tb_mon_task_hist_m(alert_event_type, exec_dtm desc);
+create index if not exists idx_tb_mon_task_hist_l_03
+    on tb_mon_task_hist_l(alert_event_type, exec_dtm desc);

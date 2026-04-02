@@ -11,11 +11,11 @@ import java.util.List;
 @Mapper
 public interface MonitoringTaskHistoryRepository {
 
-    @Select("select coalesce(max(task_hist_id), 0) + 1 from tb_mon_task_hist_m")
+    @Select("select coalesce(max(task_hist_id), 0) + 1 from tb_mon_task_hist_l")
     Long nextHistoryId();
 
     @Insert("""
-            insert into tb_mon_task_hist_m (
+            insert into tb_mon_task_hist_l (
                 task_hist_id,
                 task_id,
                 exec_dtm,
@@ -56,7 +56,7 @@ public interface MonitoringTaskHistoryRepository {
                 exec_dur_ms,
                 fst_reg_dtm,
                 fnl_upt_dtm
-            from tb_mon_task_hist_m
+            from tb_mon_task_hist_l
             where task_id = #{taskId}
             order by exec_dtm desc
             limit #{limit} offset #{offset}
@@ -67,6 +67,6 @@ public interface MonitoringTaskHistoryRepository {
             @Param("offset") int offset
     );
 
-    @Select("select count(*) from tb_mon_task_hist_m where task_id = #{taskId}")
+    @Select("select count(*) from tb_mon_task_hist_l where task_id = #{taskId}")
     long countByTaskId(@Param("taskId") Long taskId);
 }
