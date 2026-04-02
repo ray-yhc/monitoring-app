@@ -3,6 +3,8 @@ package com.example.monitoringapp.task.service.dto;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MonitoringTaskResponse {
 
@@ -18,6 +20,8 @@ public class MonitoringTaskResponse {
     private LocalDateTime lastExecDtm;
     private String lastExecRslt;
     private String lastExecRsltMsg;
+    private List<Long> reportGroupIds = new ArrayList<>();
+    private List<ReportGroupResponse> reportGroups = new ArrayList<>();
 
     public Long getTaskId() { return taskId; }
     public void setTaskId(Long taskId) { this.taskId = taskId; }
@@ -43,4 +47,8 @@ public class MonitoringTaskResponse {
     public void setLastExecRslt(String lastExecRslt) { this.lastExecRslt = lastExecRslt; }
     public String getLastExecRsltMsg() { return lastExecRsltMsg; }
     public void setLastExecRsltMsg(String lastExecRsltMsg) { this.lastExecRsltMsg = lastExecRsltMsg; }
+    public List<Long> getReportGroupIds() { return reportGroupIds; }
+    public void setReportGroupIds(List<Long> reportGroupIds) { this.reportGroupIds = reportGroupIds; }
+    public List<ReportGroupResponse> getReportGroups() { return reportGroups; }
+    public void setReportGroups(List<ReportGroupResponse> reportGroups) { this.reportGroups = reportGroups; }
 }

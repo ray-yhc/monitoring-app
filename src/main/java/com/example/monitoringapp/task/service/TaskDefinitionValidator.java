@@ -17,6 +17,14 @@ public class TaskDefinitionValidator {
             throw new IllegalArgumentException("activeYn must be Y or N");
         }
 
+        if (request.getReportGroupIds() != null) {
+            for (Long reportGroupId : request.getReportGroupIds()) {
+                if (reportGroupId == null || reportGroupId <= 0L) {
+                    throw new IllegalArgumentException("reportGroupIds must contain positive numbers only");
+                }
+            }
+        }
+
         switch (taskType) {
             case URL_HEALTH_CHECK -> {
                 requireText(request.getExecParam(), "url");

@@ -49,3 +49,50 @@ insert into tb_mon_task_m (
     now(),
     now()
 );
+
+insert into tb_mon_report_group_m (
+    report_group_id,
+    report_group_name,
+    description,
+    chat_room_id,
+    send_yn,
+    fst_reg_dtm,
+    fnl_upt_dtm
+) values
+(
+    1,
+    'Ops Main Room',
+    '운영 메인 알림방',
+    'ops-main-room',
+    'Y',
+    now(),
+    now()
+),
+(
+    2,
+    'DB Alert Room',
+    'DB 관련 경보 수신 방',
+    'db-alert-room',
+    'Y',
+    now(),
+    now()
+);
+
+insert into tb_mon_task_report_group_r (
+    task_id,
+    report_group_id,
+    fst_reg_dtm,
+    fnl_upt_dtm
+) values
+(
+    1,
+    1,
+    now(),
+    now()
+),
+(
+    2,
+    2,
+    now(),
+    now()
+);

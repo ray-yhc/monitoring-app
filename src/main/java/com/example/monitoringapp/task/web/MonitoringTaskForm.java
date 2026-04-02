@@ -5,6 +5,9 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class MonitoringTaskForm {
 
     private Long taskId;
@@ -25,6 +28,7 @@ public class MonitoringTaskForm {
     private Integer taskPrio = 100;
     @NotBlank
     private String activeYn = "Y";
+    private List<Long> reportGroupIds = new ArrayList<>();
 
     public Long getTaskId() { return taskId; }
     public void setTaskId(Long taskId) { this.taskId = taskId; }
@@ -44,4 +48,6 @@ public class MonitoringTaskForm {
     public void setTaskPrio(Integer taskPrio) { this.taskPrio = taskPrio; }
     public String getActiveYn() { return activeYn; }
     public void setActiveYn(String activeYn) { this.activeYn = activeYn; }
+    public List<Long> getReportGroupIds() { return reportGroupIds; }
+    public void setReportGroupIds(List<Long> reportGroupIds) { this.reportGroupIds = reportGroupIds; }
 }

@@ -4,6 +4,7 @@ import com.example.monitoringapp.common.json.JsonSupport;
 import com.example.monitoringapp.task.service.MonitoringTaskCommandService;
 import com.example.monitoringapp.task.service.MonitoringTaskExecutionService;
 import com.example.monitoringapp.task.service.MonitoringTaskQueryService;
+import com.example.monitoringapp.task.service.ReportGroupQueryService;
 import com.example.monitoringapp.task.service.dto.MonitoringTaskResponse;
 import com.example.monitoringapp.task.service.dto.MonitoringTaskUpsertRequest;
 import jakarta.validation.Valid;
@@ -28,17 +29,20 @@ public class MonitoringTaskPageController {
     private final MonitoringTaskQueryService monitoringTaskQueryService;
     private final MonitoringTaskCommandService monitoringTaskCommandService;
     private final MonitoringTaskExecutionService monitoringTaskExecutionService;
+    private final ReportGroupQueryService reportGroupQueryService;
     private final JsonSupport jsonSupport;
 
     public MonitoringTaskPageController(
             MonitoringTaskQueryService monitoringTaskQueryService,
             MonitoringTaskCommandService monitoringTaskCommandService,
             MonitoringTaskExecutionService monitoringTaskExecutionService,
+            ReportGroupQueryService reportGroupQueryService,
             JsonSupport jsonSupport
     ) {
         this.monitoringTaskQueryService = monitoringTaskQueryService;
         this.monitoringTaskCommandService = monitoringTaskCommandService;
         this.monitoringTaskExecutionService = monitoringTaskExecutionService;
+        this.reportGroupQueryService = reportGroupQueryService;
         this.jsonSupport = jsonSupport;
     }
 
@@ -69,6 +73,7 @@ public class MonitoringTaskPageController {
         model.addAttribute("taskForm", form);
         model.addAttribute("formMode", "create");
         model.addAttribute("formAction", "/tasks");
+        model.addAttribute("reportGroups", reportGroupQueryService.getReportGroups());
         return "tasks/form";
     }
 
@@ -77,6 +82,7 @@ public class MonitoringTaskPageController {
         if (bindingResult.hasErrors()) {
             model.addAttribute("formMode", "create");
             model.addAttribute("formAction", "/tasks");
+            model.addAttribute("reportGroups", reportGroupQueryService.getReportGroups());
             return "tasks/form";
         }
         try {
@@ -87,6 +93,7 @@ public class MonitoringTaskPageController {
             bindingResult.reject("global", e.getMessage());
             model.addAttribute("formMode", "create");
             model.addAttribute("formAction", "/tasks");
+            model.addAttribute("reportGroups", reportGroupQueryService.getReportGroups());
             return "tasks/form";
         }
     }
@@ -105,6 +112,7 @@ public class MonitoringTaskPageController {
         model.addAttribute("formMode", "edit");
         model.addAttribute("taskId", taskId);
         model.addAttribute("formAction", "/tasks/" + taskId + "/edit");
+        model.addAttribute("reportGroups", reportGroupQueryService.getReportGroups());
         return "tasks/form";
     }
 
@@ -114,6 +122,7 @@ public class MonitoringTaskPageController {
             model.addAttribute("formMode", "edit");
             model.addAttribute("taskId", taskId);
             model.addAttribute("formAction", "/tasks/" + taskId + "/edit");
+            model.addAttribute("reportGroups", reportGroupQueryService.getReportGroups());
             return "tasks/form";
         }
         try {
@@ -125,6 +134,7 @@ public class MonitoringTaskPageController {
             model.addAttribute("formMode", "edit");
             model.addAttribute("taskId", taskId);
             model.addAttribute("formAction", "/tasks/" + taskId + "/edit");
+            model.addAttribute("reportGroups", reportGroupQueryService.getReportGroups());
             return "tasks/form";
         }
     }
@@ -167,6 +177,7 @@ public class MonitoringTaskPageController {
         request.setScheduleVal(form.getScheduleVal());
         request.setTaskPrio(form.getTaskPrio());
         request.setActiveYn(form.getActiveYn());
+        request.setReportGroupIds(form.getReportGroupIds());
         return request;
     }
 
@@ -181,6 +192,7 @@ public class MonitoringTaskPageController {
         form.setScheduleVal(response.getScheduleVal());
         form.setTaskPrio(response.getTaskPrio());
         form.setActiveYn(response.getActiveYn());
+        form.setReportGroupIds(response.getReportGroupIds());
         return form;
     }
 }

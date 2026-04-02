@@ -32,6 +32,29 @@ create table if not exists tb_mon_task_hist_l (
         references tb_mon_task_m(task_id)
 );
 
+create table if not exists tb_mon_report_group_m (
+    report_group_id bigint primary key,
+    report_group_name varchar(200) not null,
+    description varchar(1000),
+    chat_room_id varchar(200) not null,
+    send_yn char(1) not null default 'Y',
+    fst_reg_dtm timestamp not null,
+    fnl_upt_dtm timestamp not null,
+    constraint ck_tb_mon_report_group_m_send_yn check (send_yn in ('Y', 'N'))
+);
+
+create table if not exists tb_mon_task_report_group_r (
+    task_id bigint not null,
+    report_group_id bigint not null,
+    fst_reg_dtm timestamp not null,
+    fnl_upt_dtm timestamp not null,
+    constraint pk_tb_mon_task_report_group_r primary key (task_id, report_group_id),
+    constraint fk_tb_mon_task_report_group_r_task_id foreign key (task_id)
+        references tb_mon_task_m(task_id),
+    constraint fk_tb_mon_task_report_group_r_report_group_id foreign key (report_group_id)
+        references tb_mon_report_group_m(report_group_id)
+);
+
 create index if not exists idx_tb_mon_task_m_01
     on tb_mon_task_m(active_yn, schedule_val, task_prio);
 
@@ -49,3 +72,9 @@ create index if not exists idx_tb_mon_task_hist_l_02
 
 create index if not exists idx_tb_mon_task_hist_l_03
     on tb_mon_task_hist_l(alert_event_type, exec_dtm desc);
+
+create index if not exists idx_tb_mon_report_group_m_01
+    on tb_mon_report_group_m(send_yn);
+
+create index if not exists idx_tb_mon_task_report_group_r_01
+    on tb_mon_task_report_group_r(report_group_id, task_id);

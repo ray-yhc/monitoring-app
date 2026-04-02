@@ -9,7 +9,7 @@
 
 <!-- Top Nav -->
 <header class="bg-slate-900 text-white px-8 py-4 flex items-center gap-4 shadow">
-    <a href="/tasks" class="text-slate-400 hover:text-white text-sm transition">← Task List</a>
+    <a href="/tasks" class="text-slate-400 hover:text-white text-sm transition">Task List</a>
     <span class="text-slate-600">/</span>
     <h1 class="text-lg font-bold" th:text="${task.taskNm}"></h1>
 </header>
@@ -41,6 +41,15 @@
             <div class="flex gap-2">
                 <dt class="text-slate-500 w-32 shrink-0">Priority</dt>
                 <dd th:text="${task.taskPrio}"></dd>
+            </div>
+            <div class="flex gap-2 col-span-2">
+                <dt class="text-slate-500 w-32 shrink-0">Report Groups</dt>
+                <dd class="flex flex-wrap gap-2">
+                    <span th:each="group : ${task.reportGroups}"
+                          class="inline-flex items-center bg-indigo-50 text-indigo-700 text-xs font-medium px-2 py-0.5 rounded"
+                          th:text="${group.reportGroupName}"></span>
+                    <span th:if="${#lists.isEmpty(task.reportGroups)}" class="text-slate-500">-</span>
+                </dd>
             </div>
             <div class="flex gap-2">
                 <dt class="text-slate-500 w-32 shrink-0">Active</dt>

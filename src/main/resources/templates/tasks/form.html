@@ -9,7 +9,7 @@
 
 <!-- Top Nav -->
 <header class="bg-slate-900 text-white px-8 py-4 flex items-center gap-4 shadow">
-    <a href="/tasks" class="text-slate-400 hover:text-white text-sm transition">← Task List</a>
+    <a href="/tasks" class="text-slate-400 hover:text-white text-sm transition">Task List</a>
     <span class="text-slate-600">/</span>
     <h1 class="text-lg font-bold">
         <span th:if="${formMode == 'create'}">Create Task</span>
@@ -66,6 +66,28 @@
                 <label for="taskCntnt" class="block text-sm font-semibold text-slate-700 mb-1">Description</label>
                 <input id="taskCntnt" type="text" th:field="*{taskCntnt}"
                        class="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+
+            <!-- Report Groups -->
+            <div>
+                <p class="block text-sm font-semibold text-slate-700 mb-2">Report Groups</p>
+                <div class="border border-slate-300 rounded p-3 max-h-52 overflow-auto space-y-2">
+                    <label th:each="group : ${reportGroups}" class="flex items-start gap-2 text-sm text-slate-700">
+                        <input type="checkbox"
+                               th:field="*{reportGroupIds}"
+                               th:value="${group.reportGroupId}"
+                               class="mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                        <span class="inline-flex flex-col">
+                            <span>
+                                <span class="font-medium" th:text="${group.reportGroupName}"></span>
+                                <span th:text="${' (#' + group.reportGroupId + ')'}" class="text-xs text-slate-400"></span>
+                            </span>
+                            <span th:if="${group.description != null and !#strings.isEmpty(group.description)}"
+                                  th:text="${group.description}" class="text-xs text-slate-500"></span>
+                        </span>
+                    </label>
+                    <p th:if="${#lists.isEmpty(reportGroups)}" class="text-xs text-slate-500">No report groups available.</p>
+                </div>
             </div>
 
             <!-- Row: Cron + Priority -->
