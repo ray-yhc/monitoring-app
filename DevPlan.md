@@ -1093,3 +1093,100 @@ create index if not exists idx_tb_mon_task_report_group_r_01
 - `report_group_id` 채번 전략: bigint sequencial
 - `chat_room_id` unique 제약 여부 : X
 - Task 목록 화면에서 report group 노출 여부 : X
+
+## 27. 신규 Task Type 추가 계획: DB_TEMPLATE_CHECK
+
+### 27.1 요구사항 요약
+- 신규 작업 타입 `DB_TEMPLATE_CHECK`를 추가한다.
+- SQL 실행 결과는 템플릿 형태를 따른다.
+  - 컬럼: `STATUS`, `MESSAGE`
+  - `STATUS` 값: `SUCCESS` 또는 `FAIL`
+  - `MESSAGE` 값: 문자열 메시지
+- 판정 기준:
+  - `STATUS == 'SUCCESS'`이면 성공
+  - 그 외(`FAIL`, 기타 값, 출력 포맷 오류)는 실패/에러 처리
+- 저장 데이터:
+  - 실행 결과 데이터에 `MESSAGE`를 저장한다.
+- 출력 포맷 불일치 또는 쿼리 오류 발생 시 에러 메시지를 결과에 기록한다.
+
+### 27.2 범위
+- 포함:
+  - enum/validator/실행기(executor)/결과 매핑/이력 저장 반영
+  - UI(Task Type 선택) 및 JSON 예시 확장
+  - API 요청/응답 스키마 반영
+- 제외:
+  - 기존 타입 동작 변경
+  - DB 드라이버/데이터소스 신규 추가
+
+### 27.3 도메인/Enum 변경 계획
+- `TaskType`에 `DB_TEMPLATE_CHECK` 추가
+- 필요 시 결과 메시지 표준화를 위한 내부 상수 추가
+  - 예: `INVALID_TEMPLATE_RESPONSE`, `QUERY_EXECUTION_ERROR`
+
+### 27.4 파라미터/검증 계획
+- execution param
+  - `db` (datasource key)
+  - `query` (SQL)
+- success param
+  - 없음(또는 빈 객체 허용)
+- validator 규칙
+  - `db`, `query` 필수
+  - SQL 실행 결과에 `STATUS`, `MESSAGE` 컬럼 존재 여부는 런타임 검증
+
+### 27.5 실행 로직 계획
+- 신규 executor: `DbTemplateCheckTaskExecutor`
+- 처리 순서:
+  1. `db`, `query` 추출
+  2. 대상 datasource에서 SQL 실행
+  3. 첫 행 기준으로 `STATUS`, `MESSAGE` 추출
+  4. `STATUS == SUCCESS`면 `TaskResult.SUCCESS`
+  5. `STATUS == FAIL`이면 `TaskResult.FAILURE`
+  6. 출력 포맷 오류(컬럼 누락/행 없음/타입 불일치)는 `TaskResult.ERROR`
+  7. 쿼리 예외 발생 시 `TaskResult.ERROR`
+- 저장 데이터(`exec_rslt_data`) 예시
+```json
+{
+  "status": "SUCCESS",
+  "message": "template check passed"
+}
+```
+- 오류 시 `exec_rslt_msg`에 원인 요약 기록
+  - 예: `Invalid template response: STATUS column missing`
+  - 예: `Query execution error: relation ... does not exist`
+
+### 27.6 서비스/리포지토리 영향 계획
+- `ExternalDatabaseQueryService` 재사용
+- `MonitoringTaskExecutionService`의 executor 매핑에 신규 타입 연결
+- 기존 히스토리/마스터 업데이트 로직은 동일 경로 사용
+
+### 27.7 UI/API 반영 계획
+- Task 생성/수정 화면
+  - Task Type 목록에 `DB_TEMPLATE_CHECK` 추가
+  - JSON 예시 추가
+    - execution 예시: `{ "db": "default", "query": "select 'SUCCESS' as STATUS, 'ok' as MESSAGE" }`
+- REST API
+  - 기존 Task create/update 계약에서 `taskTypeCd=DB_TEMPLATE_CHECK` 허용
+  - Task detail 응답에서 실행 결과 메시지 확인 가능
+
+### 27.8 예외/경계 케이스 처리 계획
+- 결과 행이 0건인 경우: ERROR
+- 결과 행이 여러 건인 경우: 1행만 평가(정책 명시)
+- `STATUS` 값이 `SUCCESS`/`FAIL` 외 값인 경우: ERROR
+- `MESSAGE`가 null인 경우: 빈 문자열로 저장 또는 null 허용(정책 확정 필요)
+
+### 27.9 테스트 계획(추가)
+- 단위 테스트
+  - STATUS=SUCCESS -> SUCCESS
+  - STATUS=FAIL -> FAILURE
+  - STATUS 컬럼 누락 -> ERROR
+  - MESSAGE 컬럼 누락 -> ERROR
+  - 결과 0건 -> ERROR
+  - 쿼리 예외 -> ERROR
+- 통합 테스트
+  - Task 등록 후 수동 실행 시 이력 저장 검증
+  - `exec_rslt_msg`, `exec_rslt_data.message` 반영 검증
+
+### 27.10 확정 필요 항목
+- `MESSAGE` null 허용 정책 : 가능
+- 다건 결과 시 평가 기준(1행 고정 vs 집계 규칙) : 1행 고정
+- `STATUS` 대소문자 허용 범위(`SUCCESS`만 허용 vs 대소문자 무시) : 대소문자 무시

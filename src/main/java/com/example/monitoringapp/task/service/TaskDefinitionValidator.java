@@ -43,6 +43,10 @@ public class TaskDefinitionValidator {
                 requireText(request.getSuccessParam(), "comparison");
                 requireNode(request.getSuccessParam(), "expectedValue");
             }
+            case DB_TEMPLATE_CHECK -> {
+                requireText(request.getExecParam(), "db");
+                requireText(request.getExecParam(), "query");
+            }
             case ES_LOG_CHECK -> {
                 requireText(request.getExecParam(), "url");
                 requireText(request.getExecParam(), "method");

@@ -52,6 +52,7 @@ public class MonitoringTaskPageController {
         examples.put("URL_HEALTH_CHECK", "{\n  \"url\": \"http://localhost:8080/actuator/health\",\n  \"method\": \"GET\",\n  \"timeoutMs\": 3000,\n  \"headers\": {\n    \"Accept\": \"application/json\"\n  }\n}");
         examples.put("URL_RESPONSE_CHECK", "{\n  \"url\": \"https://example.com/api/status\",\n  \"method\": \"GET\",\n  \"timeoutMs\": 5000\n}");
         examples.put("DB_QUERY_CHECK", "{\n  \"db\": \"default\",\n  \"query\": \"SELECT 1\"\n}");
+        examples.put("DB_TEMPLATE_CHECK", "{\n  \"db\": \"default\",\n  \"query\": \"select 'SUCCESS' as STATUS, 'template check passed' as MESSAGE\"\n}");
         examples.put("ES_LOG_CHECK", "{\n  \"url\": \"http://localhost:9200/logs-*/_search\",\n  \"method\": \"POST\",\n  \"body\": {\n    \"size\": 0\n  }\n}");
         examples.put("PROM_QL_CHECK", "{\n  \"url\": \"http://localhost:9090/api/v1/query\",\n  \"method\": \"GET\",\n  \"queryParams\": {\n    \"query\": \"up\"\n  }\n}");
         return examples;

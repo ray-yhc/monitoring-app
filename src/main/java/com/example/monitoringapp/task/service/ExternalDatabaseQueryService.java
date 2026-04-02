@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -27,10 +28,24 @@ public class ExternalDatabaseQueryService {
     }
 
     public Object queryScalar(String datasourceKey, String query) {
+        JdbcTemplate jdbcTemplate = jdbcTemplateOf(datasourceKey);
+        return jdbcTemplate.queryForObject(query, Object.class);
+    }
+
+    public Map<String, Object> queryFirstRow(String datasourceKey, String query) {
+        JdbcTemplate jdbcTemplate = jdbcTemplateOf(datasourceKey);
+        List<Map<String, Object>> rows = jdbcTemplate.queryForList(query);
+        if (rows.isEmpty()) {
+            throw new IllegalArgumentException("Query returned no rows");
+        }
+        return rows.get(0);
+    }
+
+    private JdbcTemplate jdbcTemplateOf(String datasourceKey) {
         JdbcTemplate jdbcTemplate = jdbcTemplates.get(datasourceKey);
         if (jdbcTemplate == null) {
             throw new IllegalArgumentException("Unknown datasource key: " + datasourceKey);
         }
-        return jdbcTemplate.queryForObject(query, Object.class);
+        return jdbcTemplate;
     }
 }
