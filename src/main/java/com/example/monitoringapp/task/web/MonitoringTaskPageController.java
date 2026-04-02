@@ -101,7 +101,10 @@ public class MonitoringTaskPageController {
 
     @GetMapping("/{taskId}")
     public String taskDetail(@PathVariable Long taskId, Model model) {
-        model.addAttribute("task", monitoringTaskQueryService.getTask(taskId));
+        MonitoringTaskResponse task = monitoringTaskQueryService.getTask(taskId);
+        model.addAttribute("task", task);
+        model.addAttribute("execParamPretty", jsonSupport.writePretty(task.getExecParam()));
+        model.addAttribute("successParamPretty", jsonSupport.writePretty(task.getSuccessParam()));
         model.addAttribute("histories", monitoringTaskQueryService.getTaskHistories(taskId, 0, 10));
         return "tasks/detail";
     }
