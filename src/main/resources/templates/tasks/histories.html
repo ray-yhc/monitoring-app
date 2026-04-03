@@ -8,10 +8,10 @@
 <body class="bg-slate-50 text-slate-800 min-h-screen">
 
 <!-- Top Nav -->
-<header class="bg-slate-900 text-white px-8 py-4 flex items-center gap-4 shadow">
-    <a href="/tasks" class="text-slate-400 hover:text-white text-sm transition">← Task List</a>
+<header class="bg-slate-10 text-slate-800 px-8 py-4 flex items-center gap-4 shadow">
+    <a href="/tasks" class="text-slate-600 hover:text-white text-sm transition">← Task List</a>
     <span class="text-slate-600">/</span>
-    <a th:href="@{|/tasks/${task.taskId}|}" class="text-slate-400 hover:text-white text-sm transition" th:text="${task.taskNm}"></a>
+    <a th:href="@{|/tasks/${task.taskId}|}" class="text-slate-600 hover:text-white text-sm transition" th:text="${task.taskNm}"></a>
     <span class="text-slate-600">/</span>
     <h1 class="text-lg font-bold">History</h1>
 </header>
@@ -21,12 +21,12 @@
     <!-- Table Card -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
         <div class="px-6 py-4 border-b border-slate-100">
-            <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider">
+            <h2 class="text-sm font-semibold text-slate-700 uppercase tracking-wider">
                 Execution History — <span class="text-slate-800" th:text="${task.taskNm}"></span>
             </h2>
         </div>
         <table class="w-full text-sm">
-            <thead class="bg-slate-800 text-slate-100 text-xs uppercase tracking-wider">
+            <thead class="bg-blue-50 text-blue-800 text-xs uppercase tracking-wider">
             <tr>
                 <th class="px-4 py-3 text-left">Executed At</th>
                 <th class="px-4 py-3 text-left">Trigger</th>
@@ -39,23 +39,21 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
             <tr th:each="history : ${historyPage.contents}" class="hover:bg-slate-50 transition">
-                <td class="px-4 py-3 text-xs text-slate-500 font-mono whitespace-nowrap" th:text="${history.execDtm}"></td>
+                <td class="px-4 py-3 text-xs text-slate-700 font-mono whitespace-nowrap" th:text="${history.execDtm}"></td>
                 <td class="px-4 py-3 text-xs">
                     <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono" th:text="${history.execTrgTypeCd}"></span>
                 </td>
                 <td class="px-4 py-3 text-xs font-semibold"
                     th:text="${history.execRslt}"
                     th:classappend="${history.execRslt == 'SUCCESS'} ? 'text-green-700' : 'text-red-600'"></td>
-                <td class="px-4 py-3 text-xs text-slate-500 max-w-xs" th:text="${history.execRsltMsg}"></td>
+                <td class="px-4 py-3 text-xs text-slate-700 max-w-xs" th:text="${history.execRsltMsg}"></td>
                 <td class="px-4 py-3 text-xs">
                     <pre class="font-mono text-slate-600 whitespace-pre-wrap max-w-sm" th:text="${history.execRsltData}"></pre>
                 </td>
                 <td class="px-4 py-3 text-xs">
-                    <span th:if="${history.alertEventType != null and !#strings.isEmpty(history.alertEventType)}"
-                          class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded text-xs font-medium"
-                          th:text="${history.alertEventType}"></span>
-                    <span th:if="${history.alertEventType == null or #strings.isEmpty(history.alertEventType)}"
-                          class="text-slate-300">—</span>
+                    <span th:class="${history.alertEventType == 'ALERT_TRIGGERED' ? 'bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-medium' : (history.alertEventType == 'ALERT_RESOLVED' ? 'bg-green-100 text-green-700 px-2 py-0.5 rounded text-xs font-medium' : 'bg-slate-100 text-slate-500 px-2 py-0.5 rounded text-xs font-medium')}"
+                          th:text="${(history.alertEventType != null and !#strings.isEmpty(history.alertEventType)) ? history.alertEventType : 'NONE'}">
+                    </span>
                 </td>
                 <td class="px-4 py-3 text-xs text-right font-mono text-slate-600" th:text="${history.execDurMs}"></td>
             </tr>

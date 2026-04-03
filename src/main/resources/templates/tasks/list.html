@@ -8,10 +8,10 @@
 <body class="bg-slate-50 text-slate-800 min-h-screen">
 
 <!-- Top Nav -->
-<header class="bg-slate-900 text-white px-8 py-4 flex items-center justify-between shadow">
+<header class="bg-slate-10 text-slate-800 px-8 py-4 flex items-center justify-between shadow">
     <h1 class="text-xl font-bold tracking-wide">Monitoring Tasks</h1>
     <a href="/tasks/new"
-       class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded transition">
+       class="bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded transition">
         + Create Task
     </a>
 </header>
@@ -25,30 +25,30 @@
 
     <!-- Table card -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
-        <table class="w-full text-sm">
-            <thead class="bg-slate-800 text-slate-100 uppercase text-xs tracking-wider">
+        <table class="w-full text-sm table-fixed">
+            <thead class="bg-slate-10 text-slate-800 uppercase text-xs tracking-wider">
             <tr>
-                <th class="px-4 py-3 text-left">ID</th>
+                <th class="px-4 py-3 text-left w-14">ID</th>
                 <th class="px-4 py-3 text-left">Task Name</th>
-                <th class="px-4 py-3 text-left">Type</th>
-                <th class="px-4 py-3 text-left">Cron</th>
-                <th class="px-4 py-3 text-center">Priority</th>
-                <th class="px-4 py-3 text-center">Active</th>
-                <th class="px-4 py-3 text-left">Last Executed</th>
+                <th class="px-4 py-3 text-left w-44">Type</th>
+                <th class="px-4 py-3 text-left w-32">Cron</th>
+                <th class="px-4 py-3 text-center w-20">Priority</th>
+                <th class="px-4 py-3 text-center w-20">Active</th>
+                <th class="px-4 py-3 text-left ">Last Executed</th>
                 <th class="px-4 py-3 text-left">Last Result</th>
-                <th class="px-4 py-3 text-center">Actions</th>
+                <th class="px-4 py-3 text-center w-38">Actions</th>
             </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
             <tr th:each="task : ${tasks}" class="hover:bg-slate-50 transition">
-                <td class="px-4 py-3 text-slate-500 font-mono text-xs" th:text="${task.taskId}"></td>
-                <td class="px-4 py-3 font-medium">
-                    <a th:href="@{|/tasks/${task.taskId}|}" class="text-blue-700 hover:underline" th:text="${task.taskNm}"></a>
+                <td class="px-4 py-3 text-slate-700 font-mono text-xs truncate" th:text="${task.taskId}"></td>
+                <td class="px-4 py-3 font-medium max-w-0">
+                    <a th:href="@{|/tasks/${task.taskId}|}" class="text-blue-700 hover:underline block truncate" th:text="${task.taskNm}"></a>
                 </td>
-                <td class="px-4 py-3">
-                    <span class="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded font-mono" th:text="${task.taskTypeCd}"></span>
+                <td class="px-4 py-3 overflow-hidden">
+                    <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded font-semibold border border-indigo-200 inline-block truncate max-w-full" th:text="${task.taskTypeCd}"></span>
                 </td>
-                <td class="px-4 py-3 font-mono text-xs text-slate-600" th:text="${task.scheduleVal}"></td>
+                <td class="px-4 py-3 font-mono text-xs text-slate-600 truncate" th:text="${task.scheduleVal}"></td>
                 <td class="px-4 py-3 text-center text-slate-600" th:text="${task.taskPrio}"></td>
                 <td class="px-4 py-3 text-center">
                     <span th:if="${task.activeYn == 'Y'}"
@@ -56,24 +56,24 @@
                     <span th:if="${task.activeYn != 'Y'}"
                           class="inline-block bg-red-100 text-red-600 text-xs font-semibold px-2 py-0.5 rounded-full" th:text="${task.activeYn}"></span>
                 </td>
-                <td class="px-4 py-3 text-xs text-slate-500" th:text="${task.lastExecDtm}"></td>
-                <td class="px-4 py-3">
+                <td class="px-4 py-3 text-xs text-slate-700 truncate" th:text="${task.lastExecDtm}"></td>
+                <td class="px-4 py-3 overflow-hidden">
                     <span th:text="${task.lastExecRslt}"
                           th:classappend="${task.lastExecRslt == 'SUCCESS'} ? 'text-green-700 font-semibold' : 'text-red-600 font-semibold'"></span>
-                    <div class="text-xs text-slate-400 mt-0.5 truncate max-w-xs" th:text="${task.lastExecRsltMsg}"></div>
+                    <div class="text-xs text-slate-700 mt-0.5 truncate" th:text="${task.lastExecRsltMsg}"></div>
                 </td>
                 <td class="px-4 py-3">
                     <div class="flex items-center gap-1 justify-center">
                         <!-- Edit -->
                         <a th:href="@{|/tasks/${task.taskId}/edit|}" title="Edit"
-                           class="p-1.5 rounded hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition">
+                           class="p-1.5 rounded hover:bg-slate-100 text-slate-700 hover:text-slate-800 transition">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487a2.25 2.25 0 1 1 3.182 3.182L7.5 20.213l-4.5 1.318 1.318-4.5L16.862 4.487z"/>
                             </svg>
                         </a>
                         <!-- History -->
                         <a th:href="@{|/tasks/${task.taskId}/histories|}" title="History"
-                           class="p-1.5 rounded hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition">
+                           class="p-1.5 rounded hover:bg-slate-100 text-slate-700 hover:text-slate-800 transition">
                             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0z"/>
                             </svg>
@@ -81,7 +81,7 @@
                         <!-- Run Now -->
                         <form th:action="@{|/tasks/${task.taskId}/restart|}" method="post" class="inline">
                             <button type="submit" title="Run Now"
-                                    class="p-1.5 rounded hover:bg-blue-100 text-slate-500 hover:text-blue-700 transition cursor-pointer">
+                                    class="p-1.5 rounded hover:bg-blue-100 text-slate-700 hover:text-blue-700 transition cursor-pointer">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347c-.75.412-1.667-.13-1.667-.986V5.653z"/>
                                 </svg>
@@ -90,7 +90,7 @@
                         <!-- Deactivate -->
                         <form th:if="${task.activeYn == 'Y'}" th:action="@{|/tasks/${task.taskId}/delete|}" method="post" class="inline">
                             <button type="submit" title="Deactivate"
-                                    class="p-1.5 rounded hover:bg-red-100 text-slate-500 hover:text-red-600 transition cursor-pointer">
+                                    class="p-1.5 rounded hover:bg-red-100 text-slate-700 hover:text-red-600 transition cursor-pointer">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/>
                                 </svg>
@@ -99,7 +99,7 @@
                         <!-- Activate -->
                         <form th:if="${task.activeYn != 'Y'}" th:action="@{|/tasks/${task.taskId}/activate|}" method="post" class="inline">
                             <button type="submit" title="Activate"
-                                    class="p-1.5 rounded hover:bg-emerald-100 text-slate-500 hover:text-emerald-600 transition cursor-pointer">
+                                    class="p-1.5 rounded hover:bg-emerald-100 text-slate-700 hover:text-emerald-600 transition cursor-pointer">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
                                 </svg>
