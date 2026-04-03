@@ -26,7 +26,7 @@
             </h2>
         </div>
         <table class="w-full text-sm">
-            <thead class="bg-blue-50 text-blue-800 text-xs uppercase tracking-wider">
+            <thead class="bg-slate-100 text-slate-800 text-xs tracking-wider">
             <tr>
                 <th class="px-4 py-3 text-left">Executed At</th>
                 <th class="px-4 py-3 text-left">Trigger</th>
@@ -39,7 +39,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100">
             <tr th:each="history : ${historyPage.contents}" class="hover:bg-slate-50 transition">
-                <td class="px-4 py-3 text-xs text-slate-700 font-mono whitespace-nowrap" th:text="${history.execDtm}"></td>
+                <td class="px-4 py-3 text-xs text-slate-700 font-mono whitespace-nowrap" th:text="${history.execDtm != null ? #temporals.format(history.execDtm, 'yyyy-MM-dd HH:mm:ss') : '-'}"></td>
                 <td class="px-4 py-3 text-xs">
                     <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-mono" th:text="${history.execTrgTypeCd}"></span>
                 </td>
