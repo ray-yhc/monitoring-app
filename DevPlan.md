@@ -1190,3 +1190,222 @@ create index if not exists idx_tb_mon_task_report_group_r_01
 - `MESSAGE` null 허용 정책 : 가능
 - 다건 결과 시 평가 기준(1행 고정 vs 집계 규칙) : 1행 고정
 - `STATUS` 대소문자 허용 범위(`SUCCESS`만 허용 vs 대소문자 무시) : 대소문자 무시
+
+## 28. UI 개선 계획
+
+### 28.1 목표 및 범위
+- Thymeleaf 기반 템플릿 HTML 파일만 수정한다.
+- 백엔드 Java 코드 변경은 최소화하며, 필요한 경우 Controller의 Model 전달 값 확인 정도에 그친다.
+- 대상 파일: `list.html`, `detail.html`, `form.html`, `histories.html`
+
+### 28.2 항목별 구현 계획
+
+---
+
+#### 28.2.1 [항목1] 하위 페이지에서 뒤로가기 시 목록 자동 새로고침
+
+**문제 분석**
+- 브라우저의 Back-Forward Cache(bfcache)로 인해, detail/edit/history 화면에서 뒤로가기(`/tasks` 진입) 시 서버 요청 없이 이전 DOM이 복원된다.
+- 결과적으로 "Run Now" 실행 후 목록으로 돌아와도 `lastExecDtm`, `lastExecRslt` 등 최신 데이터가 반영되지 않는다.
+
+**구현 방식**
+- `list.html`에 JavaScript 이벤트 리스너를 추가한다.
+- `pageshow` 이벤트에서 `event.persisted === true`(bfcache에서 복원된 경우)이면 `location.reload()`를 호출한다.
+
+**수정 파일**: `list.html`
+
+**추가 코드 위치**: `</body>` 직전
+
+```html
+<script>
+  window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+      location.reload();
+    }
+  });
+</script>
+```
+
+**완료 기준**
+- detail/edit/history 화면에서 뒤로가기로 list 진입 시 서버에 새로운 GET 요청이 발생한다.
+- 목록의 마지막 실행 일시 및 결과가 최신 상태로 표시된다.
+
+---
+
+#### 28.2.2 [항목2] 테이블 너비 화면 전체 너비로 확장
+
+**문제 분석**
+- `list.html`의 `<main>` 태그에 `max-w-screen-xl mx-auto` 클래스가 적용되어 최대 1280px로 제한된다.
+- 넓은 모니터에서 테이블 우측에 여백이 발생하며, 컬럼별 고정 너비 혼용으로 일부 컬럼이 불필요하게 좁아진다.
+
+**구현 방식**
+- `list.html`: `<main>` 태그의 `max-w-screen-xl` 클래스를 제거하고 `w-full`로 변경한다.
+- `histories.html`: 동일하게 `max-w-screen-xl` 제거한다.
+- `detail.html`: `max-w-screen-lg` 제거 또는 `max-w-screen-xl`로 확장한다.
+- 테이블 내부 컬럼 너비(`w-14`, `w-44` 등 고정 너비)를 조정하여 공간을 효율적으로 배분한다.
+
+**수정 파일**: `list.html`, `histories.html`, `detail.html`
+
+**완료 기준**
+- 어떤 해상도에서도 테이블이 가용 화면 너비를 최대한 활용한다.
+- 좌우 padding(`px-8`)은 유지하여 가독성을 보존한다.
+
+---
+
+#### 28.2.3 [항목3] detail / edit / history 화면에 "Run Now" 버튼 추가
+
+**문제 분석**
+- 현재 "Run Now" 버튼은 `list.html`에만 존재한다.
+- 상세, 수정, 이력 화면에서도 즉시 실행이 필요한 경우 목록으로 돌아가야 하는 불편함이 있다.
+
+**구현 방식**
+- 각 화면의 header 영역 우측에 "Run Now" 버튼을 배치한다.
+- 버튼은 `<form method="post">` 형태로 `/tasks/{taskId}/restart` POST 요청을 수행한다.
+- `form.html`(edit 모드)의 경우, `formMode != 'create'` 조건일 때만 버튼을 렌더링한다.
+- 실행 후 목록으로 redirect되는 기존 동작을 그대로 유지한다.
+
+**수정 파일**: `detail.html`, `form.html`, `histories.html`
+
+**버튼 디자인**: list.html의 Run Now 버튼과 동일한 스타일. header에는 텍스트 포함 버튼으로 표시
+```html
+<!-- header 내 Run Now 버튼 예시 -->
+<form th:action="@{|/tasks/${task.taskId}/restart|}" method="post" class="inline ml-auto">
+    <button type="submit"
+            class="bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-xl transition cursor-pointer">
+        ▶ Run Now
+    </button>
+</form>
+```
+
+**완료 기준**
+- detail, edit(수정 모드 한정), history 화면 헤더에 "Run Now" 버튼이 표시된다.
+- 클릭 시 해당 Task가 즉시 실행되고 이후 동작(redirect 등)은 기존과 동일하다.
+- create 모드의 form.html에서는 Run Now 버튼이 표시되지 않는다.
+
+---
+
+#### 28.2.4 [항목4] detail 화면과 history 화면의 실행이력 UI 통일
+
+**문제 분석**
+
+현재 두 화면의 실행이력 테이블 컬럼 구성이 다르다.
+
+| 컬럼 | detail.html | histories.html |
+|------|:-----------:|:--------------:|
+| Executed At | O | O |
+| Trigger | O | O |
+| Result | O | O |
+| Message | O | O |
+| Result Data | X | O |
+| Alert | O | O |
+| Duration (ms) | X | O |
+
+- `detail.html`에는 `Result Data`와 `Duration (ms)` 컬럼이 없다.
+- `detail.html`에서 `histories.contents`를 참조하지만, `histories.html`은 `historyPage.contents`를 참조한다. (모델 변수명 불일치 확인 필요)
+
+**구현 방식**
+- `detail.html`의 Recent History 테이블에 `Result Data`와 `Duration (ms)` 컬럼을 추가한다.
+- 컬럼 순서를 histories.html과 동일하게 맞춘다: `Executed At → Trigger → Result → Message → Result Data → Alert → Duration (ms)`
+- `Result Data`의 경우 detail 화면에서는 공간 제약이 있으므로 `max-w-xs truncate` 처리 또는 말줄임 표시를 적용한다.
+- 컨트롤러에서 model에 담는 변수명을 확인하고, 필요 시 Thymeleaf 참조 변수명을 정렬한다.
+
+**수정 파일**: `detail.html` (주), 필요 시 컨트롤러 확인
+
+**완료 기준**
+- detail.html과 histories.html의 실행이력 테이블 컬럼이 동일하다.
+- Alert 배지 스타일(색상, 텍스트)이 두 화면에서 동일하게 표시된다.
+- Trigger 배지 스타일도 동일하다.
+
+---
+
+#### 28.2.5 [항목5] form.html의 JSON Examples를 상세 모니터링 가이드 문서로 교체
+
+**문제 분석**
+- 현재 `JSON Examples` 블록은 단순히 JSON 예시만 나열한다.
+- Task Type별 파라미터 의미, 필수 키, 성공 조건 설명이 없어 사용자가 직접 DevPlan.md를 참고해야 한다.
+
+**구현 방식**
+- `JSON Examples` 섹션을 `Monitoring Guide` 또는 `파라미터 작성 가이드` 섹션으로 교체한다.
+- 기존 `${taskTypeExamples}` 모델 데이터는 더 이상 사용하지 않고, 화면에 직접 가이드를 작성한다(정적 HTML).
+- 각 Task Type별로 다음 항목을 문서처럼 정리한다:
+  - **설명**: 해당 타입의 목적과 동작 원리
+  - **Execution Param**: 필수 필드 설명 + JSON 예시
+  - **Success Param**: 필수 필드 설명 + JSON 예시
+  - **판정 기준**: 어떤 조건에서 SUCCESS/FAILURE/ERROR가 되는지
+
+**가이드 포함 항목**
+
+| Task Type | 설명 |
+|-----------|------|
+| `URL_HEALTH_CHECK` | health endpoint 호출 후 HTTP 상태코드 및 `status` 필드 일치 여부 판정 |
+| `URL_RESPONSE_CHECK` | 일반 URL 응답 코드, 응답 시간, 본문 문자열 포함 여부 판정 |
+| `DB_QUERY_CHECK` | DB 쿼리 결과 단일 스칼라값을 비교 조건으로 판정 |
+| `DB_TEMPLATE_CHECK` | 쿼리 결과 `STATUS`/`MESSAGE` 컬럼 기반 템플릿 판정 |
+| `ES_LOG_CHECK` | Elasticsearch `_search` 응답 JSON 내 특정 경로 값 추출 후 비교 |
+| `PROM_QL_CHECK` | Prometheus `/api/v1/query` 응답 JSON 내 특정 경로 값 추출 후 비교 |
+
+**가이드에 포함될 성공조건 `comparison` 값 목록**
+- `EQUALS`, `NOT_EQUALS`, `GREATER_THAN`, `GREATER_THAN_OR_EQUAL`, `LESS_THAN`, `LESS_THAN_OR_EQUAL`, `CONTAINS`
+
+**가이드에 포함될 Cron 표현식 예시**
+- `0 */1 * * * *` — 매 분 실행
+- `0 0 * * * *` — 매 시 정각 실행
+- `0 0 9 * * MON-FRI` — 평일 오전 9시 실행
+
+**가이드에 포함될 DB datasource key 목록**
+- `default`, `module-a`, `module-b`, `module-c`
+
+**섹션 구조 (HTML 레이아웃)**
+```
+[Monitoring Guide 헤더]
+  [Cron 표현식 안내]
+  [Task Type별 섹션 반복]
+    - 타입 배지 + 설명
+    - Execution Param 테이블 (필드명 / 타입 / 필수 여부 / 설명)
+    - Execution Param JSON 예시 (code block)
+    - Success Param 테이블
+    - Success Param JSON 예시 (code block)
+    - 판정 기준 설명
+  [comparison 값 참조 표]
+```
+
+**수정 파일**: `form.html`
+
+**완료 기준**
+- JSON Examples 블록이 제거되고 Monitoring Guide 섹션으로 대체된다.
+- 각 Task Type별 Execution/Success Param 필드 설명과 JSON 예시가 포함된다.
+- `comparison` 허용 값 목록이 표시된다.
+- Cron 표현식 예시가 포함된다.
+- DB datasource key 목록이 명시된다.
+- 기존 `${taskTypeExamples}` 모델 전달이 더 이상 필요 없으면 컨트롤러에서 제거 검토한다.
+
+### 28.3 수정 파일 요약
+
+| 파일 | 수정 항목 |
+|------|-----------|
+| `list.html` | [항목1] bfcache 새로고침 스크립트 추가 |
+| `list.html` | [항목2] main 너비 제한 해제 |
+| `detail.html` | [항목2] main 너비 제한 해제 |
+| `detail.html` | [항목3] header에 Run Now 버튼 추가 |
+| `detail.html` | [항목4] 실행이력 테이블 컬럼 histories.html과 통일 |
+| `form.html` | [항목3] edit 모드일 때 header에 Run Now 버튼 추가 |
+| `form.html` | [항목5] JSON Examples 제거 → Monitoring Guide로 교체 |
+| `histories.html` | [항목2] main 너비 제한 해제 |
+| `histories.html` | [항목3] header에 Run Now 버튼 추가 |
+
+### 28.4 백엔드 영향 검토
+
+| 항목 | 백엔드 변경 필요 여부 | 비고 |
+|------|:-------------------:|------|
+| 항목1 bfcache 처리 | 불필요 | 순수 JS |
+| 항목2 너비 조정 | 불필요 | CSS 클래스 변경 |
+| 항목3 Run Now 버튼 | 불필요 | 기존 `/restart` endpoint 재사용 |
+| 항목4 이력 테이블 통일 | 확인 필요 | detail.html에서 `histories.contents` 참조 중, 컬럼 추가 시 `execDurMs`, `execRsltData` 필드가 model에 포함되는지 확인 필요 |
+| 항목5 가이드 교체 | 선택적 | `taskTypeExamples` 모델 불필요해지면 컨트롤러 정리 가능 |
+
+### 28.5 구현 순서 제안
+1. [항목2] 너비 조정 — 전 파일 CSS 클래스 수정, 가장 단순
+2. [항목1] bfcache 새로고침 — list.html 스크립트 1개 추가
+3. [항목3] Run Now 버튼 — detail/form/histories에 폼 버튼 추가
+4. [항목4] 이력 테이블 컬럼 통일 — detail.html 컬럼 구조 수정, 백엔드 모델 확인 포함
+5. [항목5] Monitoring Guide 교체 — form.html 대규모 정적 콘텐츠 작성, 가장 공수 큼

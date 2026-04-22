@@ -15,6 +15,12 @@
         <span th:if="${formMode == 'create'}">Create Task</span>
         <span th:if="${formMode != 'create'}">Edit Task</span>
     </h1>
+    <form th:if="${formMode != 'create'}" th:action="@{|/tasks/${taskId}/restart|}" method="post" class="inline ml-auto">
+        <button type="submit"
+                class="bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-xl transition cursor-pointer">
+            ▶ Run Now
+        </button>
+    </form>
 </header>
 
 <main class="px-8 py-6 max-w-screen-lg mx-auto space-y-6">
@@ -127,6 +133,10 @@
                         class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-6 py-2 rounded-xl transition cursor-pointer">
                     Save
                 </button>
+                <button th:if="${formMode == 'create'}" type="submit" formaction="/tasks/test"
+                        class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-6 py-2 rounded-xl transition cursor-pointer">
+                    ▶ Test Run
+                </button>
                 <a href="/tasks"
                    class="text-sm text-slate-600 hover:text-slate-900 px-4 py-2 rounded-xl border border-slate-300 hover:border-slate-400 transition">
                     Cancel
@@ -136,14 +146,392 @@
         </form>
     </div>
 
-    <!-- JSON Examples -->
-    <div class="bg-white rounded-lg shadow p-6">
-        <h2 class="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4">JSON Examples</h2>
-        <div th:each="entry : ${taskTypeExamples}" class="mb-5">
-            <p class="text-sm font-semibold text-slate-700 mb-2" th:text="${entry.key}"></p>
-            <pre class="bg-slate-900 text-slate-100 text-xs rounded-xl p-4 overflow-auto leading-relaxed whitespace-pre-wrap"
-                 th:text="${entry.value}"></pre>
+    <!-- Test Result -->
+    <div th:if="${testError != null}" class="bg-red-50 border border-red-300 rounded-2xl px-6 py-4">
+        <p class="text-sm font-semibold text-red-700 mb-1">Test Run Error</p>
+        <p class="text-sm text-red-600" th:text="${testError}"></p>
+    </div>
+
+    <div th:if="${testResult != null}" class="bg-white rounded-2xl shadow p-6 space-y-4">
+        <h2 class="text-sm font-semibold text-slate-700 uppercase tracking-wider">Test Result</h2>
+        <div class="flex items-center gap-4">
+            <span class="text-lg font-bold"
+                  th:text="${testResult.result}"
+                  th:classappend="${testResult.result.name() == 'SUCCESS'} ? ' text-green-700' : ' text-red-600'"></span>
+            <span class="text-xs font-mono text-slate-500" th:text="${testResult.durationMs + ' ms'}"></span>
         </div>
+        <p class="text-sm text-slate-700" th:if="${testResult.message != null}" th:text="${testResult.message}"></p>
+        <div th:if="${testResultDataPretty != null}">
+            <p class="text-xs font-semibold text-slate-700 mb-1">Result Data</p>
+            <pre class="bg-slate-900 text-slate-100 text-xs rounded-xl p-4 overflow-auto leading-relaxed whitespace-pre-wrap"
+                 th:text="${testResultDataPretty}"></pre>
+        </div>
+    </div>
+
+    <!-- Monitoring Guide -->
+    <div class="bg-white rounded-lg shadow p-6 space-y-10">
+        <h2 class="text-sm font-semibold text-slate-700 uppercase tracking-wider">Monitoring Task 작성 가이드</h2>
+
+        <!-- Cron -->
+        <section class="space-y-3">
+            <h3 class="text-base font-bold text-slate-800 border-b border-slate-200 pb-2">Cron 표현식</h3>
+            <p class="text-xs text-slate-600">Spring Scheduler 6-field cron을 사용합니다: <code class="bg-slate-100 px-1 rounded font-mono">초 분 시 일 월 요일</code></p>
+            <table class="w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
+                <thead class="bg-slate-100 text-slate-700">
+                    <tr>
+                        <th class="px-4 py-2 text-left font-semibold">표현식</th>
+                        <th class="px-4 py-2 text-left font-semibold">설명</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <tr><td class="px-4 py-2 font-mono">0 */1 * * * *</td><td class="px-4 py-2 text-slate-600">매 분 0초에 실행</td></tr>
+                    <tr><td class="px-4 py-2 font-mono">0 */5 * * * *</td><td class="px-4 py-2 text-slate-600">5분마다 실행</td></tr>
+                    <tr><td class="px-4 py-2 font-mono">0 0 * * * *</td><td class="px-4 py-2 text-slate-600">매 시 정각 실행</td></tr>
+                    <tr><td class="px-4 py-2 font-mono">0 0 9 * * MON-FRI</td><td class="px-4 py-2 text-slate-600">평일 오전 9시 실행</td></tr>
+                    <tr><td class="px-4 py-2 font-mono">0 0 0 * * *</td><td class="px-4 py-2 text-slate-600">매일 자정 실행</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- URL_HEALTH_CHECK -->
+        <section class="space-y-4">
+            <h3 class="text-base font-bold text-slate-800 border-b border-slate-200 pb-2">
+                <span class="text-blue-800 bg-gradient-to-br from-blue-100 to-blue-200 text-xs px-3 py-1 rounded-xl font-semibold mr-2">URL_HEALTH_CHECK</span>
+                Health Endpoint 상태 점검
+            </h3>
+            <p class="text-xs text-slate-600">Health endpoint를 호출하여 HTTP 상태코드와 응답 본문의 <code class="bg-slate-100 px-1 rounded font-mono">status</code> 필드 값을 점검합니다. Spring Actuator의 <code class="bg-slate-100 px-1 rounded font-mono">/actuator/health</code>와 같은 엔드포인트에 적합합니다.</p>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold text-slate-700">Execution Param</p>
+                    <table class="w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
+                        <thead class="bg-slate-100 text-slate-700"><tr><th class="px-3 py-2 text-left">필드</th><th class="px-3 py-2 text-left">필수</th><th class="px-3 py-2 text-left">설명</th></tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr><td class="px-3 py-2 font-mono">url</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">Health endpoint URL</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">method</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">HTTP 메서드 (GET)</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">timeoutMs</td><td class="px-3 py-2 text-slate-400">N</td><td class="px-3 py-2 text-slate-600">타임아웃 (ms)</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">headers</td><td class="px-3 py-2 text-slate-400">N</td><td class="px-3 py-2 text-slate-600">HTTP 헤더 오브젝트</td></tr>
+                        </tbody>
+                    </table>
+                    <pre class="bg-slate-900 text-slate-100 text-xs rounded-xl p-3 overflow-auto leading-relaxed whitespace-pre-wrap">{
+  "url": "http://localhost:8080/actuator/health",
+  "method": "GET",
+  "timeoutMs": 3000,
+  "headers": {
+    "Accept": "application/json"
+  }
+}</pre>
+                </div>
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold text-slate-700">Success Param</p>
+                    <table class="w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
+                        <thead class="bg-slate-100 text-slate-700"><tr><th class="px-3 py-2 text-left">필드</th><th class="px-3 py-2 text-left">필수</th><th class="px-3 py-2 text-left">설명</th></tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr><td class="px-3 py-2 font-mono">expectedHttpStatusCode</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">기대 HTTP 상태코드</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">expectedStatus</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">응답 JSON의 status 값 (UP 등)</td></tr>
+                        </tbody>
+                    </table>
+                    <pre class="bg-slate-900 text-slate-100 text-xs rounded-xl p-3 overflow-auto leading-relaxed whitespace-pre-wrap">{
+  "expectedHttpStatusCode": 200,
+  "expectedStatus": "UP"
+}</pre>
+                </div>
+            </div>
+            <p class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
+                <span class="font-semibold text-green-700">SUCCESS</span> — HTTP 상태코드 일치 AND status 값 일치 &nbsp;|&nbsp;
+                <span class="font-semibold text-red-600">FAILURE</span> — 조건 미충족 &nbsp;|&nbsp;
+                <span class="font-semibold text-orange-600">ERROR</span> — 연결 실패 / 타임아웃
+            </p>
+        </section>
+
+        <!-- URL_RESPONSE_CHECK -->
+        <section class="space-y-4">
+            <h3 class="text-base font-bold text-slate-800 border-b border-slate-200 pb-2">
+                <span class="text-blue-800 bg-gradient-to-br from-blue-100 to-blue-200 text-xs px-3 py-1 rounded-xl font-semibold mr-2">URL_RESPONSE_CHECK</span>
+                URL 응답 내용 점검
+            </h3>
+            <p class="text-xs text-slate-600">일반 URL을 호출하여 응답 상태코드, 응답 시간, 응답 본문 포함 문자열을 점검합니다.</p>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold text-slate-700">Execution Param</p>
+                    <table class="w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
+                        <thead class="bg-slate-100 text-slate-700"><tr><th class="px-3 py-2 text-left">필드</th><th class="px-3 py-2 text-left">필수</th><th class="px-3 py-2 text-left">설명</th></tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr><td class="px-3 py-2 font-mono">url</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">대상 URL</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">method</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">HTTP 메서드 (GET / POST)</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">timeoutMs</td><td class="px-3 py-2 text-slate-400">N</td><td class="px-3 py-2 text-slate-600">타임아웃 (ms)</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">headers</td><td class="px-3 py-2 text-slate-400">N</td><td class="px-3 py-2 text-slate-600">HTTP 헤더 오브젝트</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">body</td><td class="px-3 py-2 text-slate-400">N</td><td class="px-3 py-2 text-slate-600">POST 요청 바디</td></tr>
+                        </tbody>
+                    </table>
+                    <pre class="bg-slate-900 text-slate-100 text-xs rounded-xl p-3 overflow-auto leading-relaxed whitespace-pre-wrap">{
+  "url": "https://example.com/api/status",
+  "method": "GET",
+  "timeoutMs": 5000,
+  "headers": {
+    "Authorization": "Bearer token"
+  }
+}</pre>
+                </div>
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold text-slate-700">Success Param</p>
+                    <table class="w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
+                        <thead class="bg-slate-100 text-slate-700"><tr><th class="px-3 py-2 text-left">필드</th><th class="px-3 py-2 text-left">필수</th><th class="px-3 py-2 text-left">설명</th></tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr><td class="px-3 py-2 font-mono">expectedHttpStatusCode</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">기대 HTTP 상태코드</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">maxResponseTimeMs</td><td class="px-3 py-2 text-slate-400">N</td><td class="px-3 py-2 text-slate-600">최대 허용 응답 시간 (ms)</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">containsText</td><td class="px-3 py-2 text-slate-400">N</td><td class="px-3 py-2 text-slate-600">응답 본문 포함 필수 문자열</td></tr>
+                        </tbody>
+                    </table>
+                    <pre class="bg-slate-900 text-slate-100 text-xs rounded-xl p-3 overflow-auto leading-relaxed whitespace-pre-wrap">{
+  "expectedHttpStatusCode": 200,
+  "maxResponseTimeMs": 3000,
+  "containsText": "OK"
+}</pre>
+                </div>
+            </div>
+            <p class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
+                <span class="font-semibold text-green-700">SUCCESS</span> — 상태코드 일치 AND 응답시간 이내 AND 포함 문자열 존재 &nbsp;|&nbsp;
+                <span class="font-semibold text-red-600">FAILURE</span> — 조건 미충족 &nbsp;|&nbsp;
+                <span class="font-semibold text-orange-600">ERROR</span> — 연결 실패 / 타임아웃
+            </p>
+        </section>
+
+        <!-- DB_QUERY_CHECK -->
+        <section class="space-y-4">
+            <h3 class="text-base font-bold text-slate-800 border-b border-slate-200 pb-2">
+                <span class="text-blue-800 bg-gradient-to-br from-blue-100 to-blue-200 text-xs px-3 py-1 rounded-xl font-semibold mr-2">DB_QUERY_CHECK</span>
+                DB 쿼리 결과값 점검
+            </h3>
+            <p class="text-xs text-slate-600">DB 쿼리를 실행하여 단일 스칼라 결과값을 지정한 비교 조건으로 판정합니다. 사용 가능한 datasource key: <code class="bg-slate-100 px-1 rounded font-mono">default</code>, <code class="bg-slate-100 px-1 rounded font-mono">module-a</code>, <code class="bg-slate-100 px-1 rounded font-mono">module-b</code>, <code class="bg-slate-100 px-1 rounded font-mono">module-c</code></p>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold text-slate-700">Execution Param</p>
+                    <table class="w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
+                        <thead class="bg-slate-100 text-slate-700"><tr><th class="px-3 py-2 text-left">필드</th><th class="px-3 py-2 text-left">필수</th><th class="px-3 py-2 text-left">설명</th></tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr><td class="px-3 py-2 font-mono">db</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">Datasource key</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">query</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">단일 스칼라 값을 반환하는 SQL</td></tr>
+                        </tbody>
+                    </table>
+                    <pre class="bg-slate-900 text-slate-100 text-xs rounded-xl p-3 overflow-auto leading-relaxed whitespace-pre-wrap">{
+  "db": "module-a",
+  "query": "SELECT COUNT(*) FROM invalid_records WHERE status = 'INVALID'"
+}</pre>
+                </div>
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold text-slate-700">Success Param</p>
+                    <table class="w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
+                        <thead class="bg-slate-100 text-slate-700"><tr><th class="px-3 py-2 text-left">필드</th><th class="px-3 py-2 text-left">필수</th><th class="px-3 py-2 text-left">설명</th></tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr><td class="px-3 py-2 font-mono">comparison</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">비교 연산자 (하단 참조)</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">expectedValue</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">기대 비교 값</td></tr>
+                        </tbody>
+                    </table>
+                    <pre class="bg-slate-900 text-slate-100 text-xs rounded-xl p-3 overflow-auto leading-relaxed whitespace-pre-wrap">{
+  "comparison": "LESS_THAN",
+  "expectedValue": 1
+}</pre>
+                </div>
+            </div>
+            <p class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
+                <span class="font-semibold text-green-700">SUCCESS</span> — 쿼리 결과값이 comparison 조건 충족 &nbsp;|&nbsp;
+                <span class="font-semibold text-red-600">FAILURE</span> — 조건 미충족 &nbsp;|&nbsp;
+                <span class="font-semibold text-orange-600">ERROR</span> — 쿼리 실행 오류
+            </p>
+        </section>
+
+        <!-- DB_TEMPLATE_CHECK -->
+        <section class="space-y-4">
+            <h3 class="text-base font-bold text-slate-800 border-b border-slate-200 pb-2">
+                <span class="text-blue-800 bg-gradient-to-br from-blue-100 to-blue-200 text-xs px-3 py-1 rounded-xl font-semibold mr-2">DB_TEMPLATE_CHECK</span>
+                DB 템플릿 쿼리 점검
+            </h3>
+            <p class="text-xs text-slate-600">쿼리 결과가 <code class="bg-slate-100 px-1 rounded font-mono">STATUS</code>, <code class="bg-slate-100 px-1 rounded font-mono">MESSAGE</code> 컬럼 형태를 따르는 경우 사용합니다. STATUS 값으로 성공/실패를 판정하며, 점검 로직을 SQL 내에 직접 구현할 수 있습니다.</p>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold text-slate-700">Execution Param</p>
+                    <table class="w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
+                        <thead class="bg-slate-100 text-slate-700"><tr><th class="px-3 py-2 text-left">필드</th><th class="px-3 py-2 text-left">필수</th><th class="px-3 py-2 text-left">설명</th></tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr><td class="px-3 py-2 font-mono">db</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">Datasource key</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">query</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">STATUS, MESSAGE 컬럼을 반환하는 SQL</td></tr>
+                        </tbody>
+                    </table>
+                    <pre class="bg-slate-900 text-slate-100 text-xs rounded-xl p-3 overflow-auto leading-relaxed whitespace-pre-wrap">{
+  "db": "default",
+  "query": "SELECT
+    CASE WHEN COUNT(*) = 0
+      THEN 'SUCCESS' ELSE 'FAIL'
+    END AS STATUS,
+    CONCAT(COUNT(*), ' invalid rows') AS MESSAGE
+  FROM orders
+  WHERE status = 'INVALID'"
+}</pre>
+                </div>
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold text-slate-700">Success Param</p>
+                    <p class="text-xs text-slate-500">Success Param은 사용하지 않습니다. 빈 오브젝트를 입력하세요.</p>
+                    <pre class="bg-slate-900 text-slate-100 text-xs rounded-xl p-3 overflow-auto leading-relaxed whitespace-pre-wrap">{}</pre>
+                    <div class="text-xs text-slate-600 space-y-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                        <p class="font-semibold text-slate-700 mb-1">판정 기준</p>
+                        <p><span class="font-semibold text-green-700">SUCCESS</span> — STATUS = 'SUCCESS' (대소문자 무시)</p>
+                        <p><span class="font-semibold text-red-600">FAILURE</span> — STATUS = 'FAIL'</p>
+                        <p><span class="font-semibold text-orange-600">ERROR</span> — STATUS 컬럼 누락 / 결과 0건 / 쿼리 예외</p>
+                        <p class="text-slate-500 mt-1">결과가 여러 행인 경우 첫 번째 행만 평가합니다.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ES_LOG_CHECK -->
+        <section class="space-y-4">
+            <h3 class="text-base font-bold text-slate-800 border-b border-slate-200 pb-2">
+                <span class="text-blue-800 bg-gradient-to-br from-blue-100 to-blue-200 text-xs px-3 py-1 rounded-xl font-semibold mr-2">ES_LOG_CHECK</span>
+                Elasticsearch 쿼리 결과 점검
+            </h3>
+            <p class="text-xs text-slate-600">Elasticsearch <code class="bg-slate-100 px-1 rounded font-mono">_search</code> API를 호출하여 응답 JSON에서 지정한 경로의 값을 추출하고 비교 조건으로 판정합니다.</p>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold text-slate-700">Execution Param</p>
+                    <table class="w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
+                        <thead class="bg-slate-100 text-slate-700"><tr><th class="px-3 py-2 text-left">필드</th><th class="px-3 py-2 text-left">필수</th><th class="px-3 py-2 text-left">설명</th></tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr><td class="px-3 py-2 font-mono">url</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">_search endpoint URL</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">method</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">POST</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">body</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">ES 쿼리 바디 (size, query 등)</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">timeoutMs</td><td class="px-3 py-2 text-slate-400">N</td><td class="px-3 py-2 text-slate-600">타임아웃 (ms)</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">headers</td><td class="px-3 py-2 text-slate-400">N</td><td class="px-3 py-2 text-slate-600">HTTP 헤더 (인증 등)</td></tr>
+                        </tbody>
+                    </table>
+                    <pre class="bg-slate-900 text-slate-100 text-xs rounded-xl p-3 overflow-auto leading-relaxed whitespace-pre-wrap">{
+  "url": "http://localhost:9200/logs-*/_search",
+  "method": "POST",
+  "timeoutMs": 5000,
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": {
+    "size": 0,
+    "query": {
+      "bool": {
+        "filter": [
+          { "match": { "level": "ERROR" } },
+          { "range": { "@timestamp": { "gte": "now-5m" } } }
+        ]
+      }
+    }
+  }
+}</pre>
+                </div>
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold text-slate-700">Success Param</p>
+                    <table class="w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
+                        <thead class="bg-slate-100 text-slate-700"><tr><th class="px-3 py-2 text-left">필드</th><th class="px-3 py-2 text-left">필수</th><th class="px-3 py-2 text-left">설명</th></tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr><td class="px-3 py-2 font-mono">comparison</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">비교 연산자 (하단 참조)</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">expectedValue</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">기대 비교 값</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">valuePath</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">응답 JSON에서 값을 추출할 경로</td></tr>
+                        </tbody>
+                    </table>
+                    <pre class="bg-slate-900 text-slate-100 text-xs rounded-xl p-3 overflow-auto leading-relaxed whitespace-pre-wrap">{
+  "comparison": "LESS_THAN",
+  "expectedValue": 1,
+  "valuePath": "hits.total.value"
+}</pre>
+                    <p class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                        <span class="font-semibold text-slate-700">valuePath 예시:</span><br>
+                        <code class="font-mono">hits.total.value</code> — 전체 히트 수<br>
+                        <code class="font-mono">aggregations.error_count.value</code> — 집계 결과
+                    </p>
+                </div>
+            </div>
+            <p class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
+                <span class="font-semibold text-green-700">SUCCESS</span> — valuePath 추출값이 comparison 조건 충족 &nbsp;|&nbsp;
+                <span class="font-semibold text-red-600">FAILURE</span> — 조건 미충족 &nbsp;|&nbsp;
+                <span class="font-semibold text-orange-600">ERROR</span> — 연결 실패 / valuePath 추출 실패
+            </p>
+        </section>
+
+        <!-- PROM_QL_CHECK -->
+        <section class="space-y-4">
+            <h3 class="text-base font-bold text-slate-800 border-b border-slate-200 pb-2">
+                <span class="text-blue-800 bg-gradient-to-br from-blue-100 to-blue-200 text-xs px-3 py-1 rounded-xl font-semibold mr-2">PROM_QL_CHECK</span>
+                Prometheus PromQL 결과 점검
+            </h3>
+            <p class="text-xs text-slate-600">Prometheus <code class="bg-slate-100 px-1 rounded font-mono">/api/v1/query</code> API를 호출하여 응답 JSON에서 지정한 경로의 값을 추출하고 비교 조건으로 판정합니다.</p>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold text-slate-700">Execution Param</p>
+                    <table class="w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
+                        <thead class="bg-slate-100 text-slate-700"><tr><th class="px-3 py-2 text-left">필드</th><th class="px-3 py-2 text-left">필수</th><th class="px-3 py-2 text-left">설명</th></tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr><td class="px-3 py-2 font-mono">url</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">Prometheus query endpoint</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">method</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">GET</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">queryParams.query</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">PromQL 쿼리 문자열</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">timeoutMs</td><td class="px-3 py-2 text-slate-400">N</td><td class="px-3 py-2 text-slate-600">타임아웃 (ms)</td></tr>
+                        </tbody>
+                    </table>
+                    <pre class="bg-slate-900 text-slate-100 text-xs rounded-xl p-3 overflow-auto leading-relaxed whitespace-pre-wrap">{
+  "url": "http://localhost:9090/api/v1/query",
+  "method": "GET",
+  "timeoutMs": 5000,
+  "queryParams": {
+    "query": "up{job='monitoring-app'}"
+  }
+}</pre>
+                </div>
+                <div class="space-y-2">
+                    <p class="text-xs font-semibold text-slate-700">Success Param</p>
+                    <table class="w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
+                        <thead class="bg-slate-100 text-slate-700"><tr><th class="px-3 py-2 text-left">필드</th><th class="px-3 py-2 text-left">필수</th><th class="px-3 py-2 text-left">설명</th></tr></thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr><td class="px-3 py-2 font-mono">comparison</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">비교 연산자 (하단 참조)</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">expectedValue</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">기대 비교 값</td></tr>
+                            <tr><td class="px-3 py-2 font-mono">valuePath</td><td class="px-3 py-2 text-blue-600 font-semibold">Y</td><td class="px-3 py-2 text-slate-600">응답 JSON에서 값을 추출할 경로</td></tr>
+                        </tbody>
+                    </table>
+                    <pre class="bg-slate-900 text-slate-100 text-xs rounded-xl p-3 overflow-auto leading-relaxed whitespace-pre-wrap">{
+  "comparison": "GREATER_THAN",
+  "expectedValue": 0,
+  "valuePath": "data.result[0].value[1]"
+}</pre>
+                    <p class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                        <span class="font-semibold text-slate-700">valuePath 예시:</span><br>
+                        <code class="font-mono">data.result[0].value[1]</code> — 첫 번째 시계열의 현재값<br>
+                        <code class="font-mono">data.result.length</code> — 결과 시계열 개수
+                    </p>
+                </div>
+            </div>
+            <p class="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2">
+                <span class="font-semibold text-green-700">SUCCESS</span> — valuePath 추출값이 comparison 조건 충족 &nbsp;|&nbsp;
+                <span class="font-semibold text-red-600">FAILURE</span> — 조건 미충족 &nbsp;|&nbsp;
+                <span class="font-semibold text-orange-600">ERROR</span> — 연결 실패 / valuePath 추출 실패
+            </p>
+        </section>
+
+        <!-- Comparison Reference -->
+        <section class="space-y-3">
+            <h3 class="text-base font-bold text-slate-800 border-b border-slate-200 pb-2">comparison 값 목록</h3>
+            <p class="text-xs text-slate-600">DB_QUERY_CHECK, ES_LOG_CHECK, PROM_QL_CHECK의 Success Param에서 사용합니다.</p>
+            <table class="w-full text-xs border border-slate-200 rounded-xl overflow-hidden">
+                <thead class="bg-slate-100 text-slate-700">
+                    <tr>
+                        <th class="px-4 py-2 text-left font-semibold">값</th>
+                        <th class="px-4 py-2 text-left font-semibold">조건</th>
+                        <th class="px-4 py-2 text-left font-semibold">예시 (쿼리 결과 vs expectedValue)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    <tr><td class="px-4 py-2 font-mono">EQUALS</td><td class="px-4 py-2 text-slate-600">결과 == 기대값</td><td class="px-4 py-2 text-slate-500">결과 1, 기대 1 → SUCCESS</td></tr>
+                    <tr><td class="px-4 py-2 font-mono">NOT_EQUALS</td><td class="px-4 py-2 text-slate-600">결과 != 기대값</td><td class="px-4 py-2 text-slate-500">결과 0, 기대 1 → SUCCESS</td></tr>
+                    <tr><td class="px-4 py-2 font-mono">GREATER_THAN</td><td class="px-4 py-2 text-slate-600">결과 > 기대값</td><td class="px-4 py-2 text-slate-500">결과 5, 기대 0 → SUCCESS</td></tr>
+                    <tr><td class="px-4 py-2 font-mono">GREATER_THAN_OR_EQUAL</td><td class="px-4 py-2 text-slate-600">결과 >= 기대값</td><td class="px-4 py-2 text-slate-500">결과 1, 기대 1 → SUCCESS</td></tr>
+                    <tr><td class="px-4 py-2 font-mono">LESS_THAN</td><td class="px-4 py-2 text-slate-600">결과 &lt; 기대값</td><td class="px-4 py-2 text-slate-500">결과 0, 기대 1 → SUCCESS</td></tr>
+                    <tr><td class="px-4 py-2 font-mono">LESS_THAN_OR_EQUAL</td><td class="px-4 py-2 text-slate-600">결과 &lt;= 기대값</td><td class="px-4 py-2 text-slate-500">결과 1, 기대 1 → SUCCESS</td></tr>
+                    <tr><td class="px-4 py-2 font-mono">CONTAINS</td><td class="px-4 py-2 text-slate-600">결과 문자열에 기대값 포함</td><td class="px-4 py-2 text-slate-500">결과 "OK_200", 기대 "OK" → SUCCESS</td></tr>
+                </tbody>
+            </table>
+        </section>
     </div>
 
 </main>

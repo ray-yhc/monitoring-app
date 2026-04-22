@@ -16,7 +16,7 @@
     </a>
 </header>
 
-<main class="px-8 py-6 max-w-screen-xl mx-auto">
+<main class="px-8 py-6">
 
     <!-- Flash message -->
     <div th:if="${message}"
@@ -113,5 +113,12 @@
     </div>
 
 </main>
+<script>
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted) {
+            location.reload();
+        }
+    });
+</script>
 </body>
 </html>

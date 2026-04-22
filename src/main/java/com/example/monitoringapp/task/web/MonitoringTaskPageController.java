@@ -1,6 +1,7 @@
 package com.example.monitoringapp.task.web;
 
 import com.example.monitoringapp.common.json.JsonSupport;
+import com.example.monitoringapp.task.domain.TaskExecutionResult;
 import com.example.monitoringapp.task.service.MonitoringTaskCommandService;
 import com.example.monitoringapp.task.service.MonitoringTaskExecutionService;
 import com.example.monitoringapp.task.service.MonitoringTaskQueryService;
@@ -162,6 +163,26 @@ public class MonitoringTaskPageController {
         model.addAttribute("task", monitoringTaskQueryService.getTask(taskId));
         model.addAttribute("historyPage", monitoringTaskQueryService.getTaskHistories(taskId, page, size));
         return "tasks/histories";
+    }
+
+    @PostMapping("/test")
+    public String testRun(@ModelAttribute("taskForm") MonitoringTaskForm taskForm, Model model) {
+        try {
+            TaskExecutionResult result = monitoringTaskExecutionService.previewExecute(
+                    taskForm.getTaskTypeCd(),
+                    jsonSupport.readTree(taskForm.getExecParam()),
+                    jsonSupport.readTree(taskForm.getSuccessParam())
+            );
+            model.addAttribute("testResult", result);
+            model.addAttribute("testResultDataPretty",
+                    result.getResultData() != null ? jsonSupport.writePretty(result.getResultData()) : null);
+        } catch (Exception e) {
+            model.addAttribute("testError", e.getMessage());
+        }
+        model.addAttribute("formMode", "create");
+        model.addAttribute("formAction", "/tasks");
+        model.addAttribute("reportGroups", reportGroupQueryService.getReportGroups());
+        return "tasks/form";
     }
 
     @PostMapping("/{taskId}/restart")

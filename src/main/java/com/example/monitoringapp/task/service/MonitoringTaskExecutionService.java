@@ -1,5 +1,6 @@
 package com.example.monitoringapp.task.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.example.monitoringapp.alert.AlertNotifier;
 import com.example.monitoringapp.alert.AlertPolicyService;
 import com.example.monitoringapp.common.json.JsonSupport;
@@ -86,6 +87,39 @@ public class MonitoringTaskExecutionService {
     public TaskExecutionResult executeNow(Long taskId) {
         MonitoringTask task = monitoringTaskQueryService.getTaskDomain(taskId);
         return execute(task, ExecutionTriggerType.MANUAL, LocalDateTime.now());
+    }
+
+    public TaskExecutionResult previewExecute(String taskTypeCd, JsonNode execParam, JsonNode successParam) {
+        TaskType taskType = TaskType.valueOf(taskTypeCd);
+        TaskExecutor executor = taskExecutors.get(taskType);
+        if (executor == null) {
+            throw new IllegalStateException("No TaskExecutor for type: " + taskType);
+        }
+
+        MonitoringTask dummyTask = new MonitoringTask();
+        dummyTask.setTaskNm("(preview)");
+        dummyTask.setTaskTypeCd(taskTypeCd);
+
+        TaskExecutionContext context = new TaskExecutionContext(
+                dummyTask,
+                execParam,
+                successParam,
+                ExecutionTriggerType.MANUAL,
+                LocalDateTime.now(),
+                null
+        );
+
+        try {
+            return executor.execute(context);
+        } catch (Exception e) {
+            return new TaskExecutionResult(
+                    TaskResult.ERROR,
+                    e.getMessage(),
+                    jsonSupport.objectNode().put("error", e.getClass().getSimpleName()),
+                    0L,
+                    AlertEventType.NONE
+            );
+        }
     }
 
     private TaskExecutionResult execute(MonitoringTask task, ExecutionTriggerType triggerType, LocalDateTime now) {

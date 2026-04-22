@@ -12,9 +12,15 @@
     <a href="/tasks" class="text-slate-600 hover:text-white text-sm transition">Task List</a>
     <span class="text-slate-600">/</span>
     <h1 class="text-lg font-bold" th:text="${task.taskNm}"></h1>
+    <form th:action="@{|/tasks/${task.taskId}/restart|}" method="post" class="inline ml-auto">
+        <button type="submit"
+                class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition cursor-pointer">
+            ▶ Run Now
+        </button>
+    </form>
 </header>
 
-<main class="px-8 py-6 max-w-screen-lg mx-auto space-y-6">
+<main class="px-8 py-6 space-y-6">
 
     <!-- Basic Info Card -->
     <div class="bg-white rounded-2xl shadow p-6">
@@ -104,7 +110,9 @@
                 <th class="px-4 py-3 text-left">Trigger</th>
                 <th class="px-4 py-3 text-left">Result</th>
                 <th class="px-4 py-3 text-left">Message</th>
+                <th class="px-4 py-3 text-left">Result Data</th>
                 <th class="px-4 py-3 text-left">Alert</th>
+                <th class="px-4 py-3 text-right">Duration (ms)</th>
             </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
@@ -116,12 +124,16 @@
                 <td class="px-4 py-3 text-xs font-semibold"
                     th:text="${history.execRslt}"
                     th:classappend="${history.execRslt == 'SUCCESS'} ? 'text-green-700' : 'text-red-600'"></td>
-                <td class="px-4 py-3 text-xs text-slate-700 max-w-xs truncate" th:text="${history.execRsltMsg}"></td>
+                <td class="px-4 py-3 text-xs text-slate-700 max-w-xs" th:text="${history.execRsltMsg}"></td>
+                <td class="px-4 py-3 text-xs">
+                    <pre class="font-mono text-slate-600 whitespace-pre-wrap max-w-sm" th:text="${history.execRsltData}"></pre>
+                </td>
                 <td class="px-4 py-3 text-xs">
                     <span th:class="${history.alertEventType == 'ALERT_TRIGGERED' ? 'bg-red-100 text-red-700 px-2 py-0.5 rounded-xl text-xs font-medium' : (history.alertEventType == 'ALERT_RESOLVED' ? 'bg-green-100 text-green-700 px-2 py-0.5 rounded-xl text-xs font-medium' : 'bg-slate-100 text-slate-500 px-2 py-0.5 rounded-xl text-xs font-medium')}"
                           th:text="${(history.alertEventType != null and !#strings.isEmpty(history.alertEventType)) ? history.alertEventType : 'NONE'}">
                     </span>
                 </td>
+                <td class="px-4 py-3 text-xs text-right font-mono text-slate-600" th:text="${history.execDurMs}"></td>
             </tr>
             </tbody>
         </table>
