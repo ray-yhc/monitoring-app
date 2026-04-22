@@ -2,6 +2,7 @@ package com.example.monitoringapp.task.web;
 
 import com.example.monitoringapp.common.json.JsonSupport;
 import com.example.monitoringapp.task.domain.TaskExecutionResult;
+import com.example.monitoringapp.task.domain.TaskType;
 import com.example.monitoringapp.task.service.MonitoringTaskCommandService;
 import com.example.monitoringapp.task.service.MonitoringTaskExecutionService;
 import com.example.monitoringapp.task.service.MonitoringTaskQueryService;
@@ -48,14 +49,14 @@ public class MonitoringTaskPageController {
     }
 
     @ModelAttribute("taskTypeExamples")
-    public Map<String, String> taskTypeExamples() {
-        Map<String, String> examples = new LinkedHashMap<>();
-        examples.put("URL_HEALTH_CHECK", "{\n  \"url\": \"http://localhost:8080/actuator/health\",\n  \"method\": \"GET\",\n  \"timeoutMs\": 3000,\n  \"headers\": {\n    \"Accept\": \"application/json\"\n  }\n}");
-        examples.put("URL_RESPONSE_CHECK", "{\n  \"url\": \"https://example.com/api/status\",\n  \"method\": \"GET\",\n  \"timeoutMs\": 5000\n}");
-        examples.put("DB_QUERY_CHECK", "{\n  \"db\": \"default\",\n  \"query\": \"SELECT 1\"\n}");
-        examples.put("DB_TEMPLATE_CHECK", "{\n  \"db\": \"default\",\n  \"query\": \"select 'SUCCESS' as STATUS, 'template check passed' as MESSAGE\"\n}");
-        examples.put("ES_LOG_CHECK", "{\n  \"url\": \"http://localhost:9200/logs-*/_search\",\n  \"method\": \"POST\",\n  \"body\": {\n    \"size\": 0\n  }\n}");
-        examples.put("PROM_QL_CHECK", "{\n  \"url\": \"http://localhost:9090/api/v1/query\",\n  \"method\": \"GET\",\n  \"queryParams\": {\n    \"query\": \"up\"\n  }\n}");
+    public Map<String, Map<String, String>> taskTypeExamples() {
+        Map<String, Map<String, String>> examples = new LinkedHashMap<>();
+        for (TaskType type : TaskType.values()) {
+            Map<String, String> typeMap = new LinkedHashMap<>();
+            typeMap.put("exec", type.getExecParamExample());
+            typeMap.put("success", type.getSuccessParamExample());
+            examples.put(type.name(), typeMap);
+        }
         return examples;
     }
 
@@ -70,8 +71,8 @@ public class MonitoringTaskPageController {
         MonitoringTaskForm form = new MonitoringTaskForm();
         form.setTaskTypeCd("URL_HEALTH_CHECK");
         form.setScheduleVal("0 * * * * *");
-        form.setExecParam(taskTypeExamples().get("URL_HEALTH_CHECK"));
-        form.setSuccessParam("{\n  \"expectedHttpStatusCode\": 200,\n  \"expectedStatus\": \"UP\"\n}");
+        form.setExecParam(TaskType.URL_HEALTH_CHECK.getExecParamExample());
+        form.setSuccessParam(TaskType.URL_HEALTH_CHECK.getSuccessParamExample());
         model.addAttribute("taskForm", form);
         model.addAttribute("formMode", "create");
         model.addAttribute("formAction", "/tasks");
