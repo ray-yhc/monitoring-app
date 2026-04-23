@@ -23,24 +23,71 @@
          class="mb-4 px-4 py-3 bg-green-50 border border-green-300 text-green-800 rounded-xl text-sm"
          th:text="${message}"></div>
 
+    <!-- Search bar -->
+    <div class="mb-3 flex items-center gap-3">
+        <div class="relative">
+            <svg xmlns="http://www.w3.org/2000/svg" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/>
+            </svg>
+            <input type="text" id="searchInput"
+                   placeholder="Task Name 또는 Type 검색..."
+                   class="border border-slate-300 rounded-xl pl-9 pr-4 py-2 text-sm w-72 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+        </div>
+        <span id="rowCount" class="text-xs text-slate-400"></span>
+    </div>
+
     <!-- Table card -->
     <div class="bg-white rounded-lg shadow overflow-hidden">
         <table class="w-full text-sm table-fixed">
             <thead class="bg-slate-100 text-slate-900 text-xs tracking-wider">
             <tr>
-                <th class="px-4 py-3 text-left w-14">ID</th>
-                <th class="px-4 py-3 text-left">Task Name</th>
-                <th class="px-4 py-3 text-left w-44">Type</th>
-                <th class="px-4 py-3 text-left w-32">Cron</th>
-                <th class="px-4 py-3 text-center w-20">Priority</th>
-                <th class="px-4 py-3 text-center w-20">Active</th>
-                <th class="px-4 py-3 text-left ">Last Executed</th>
-                <th class="px-4 py-3 text-left">Last Result</th>
+                <th class="px-4 py-3 text-left w-14">
+                    <button class="flex items-center gap-1 font-semibold hover:text-blue-600 transition" data-col="id">
+                        ID <span class="sort-icon text-slate-400">↕</span>
+                    </button>
+                </th>
+                <th class="px-4 py-3 text-left">
+                    <button class="flex items-center gap-1 font-semibold hover:text-blue-600 transition" data-col="nm">
+                        Task Name <span class="sort-icon text-slate-400">↕</span>
+                    </button>
+                </th>
+                <th class="px-4 py-3 text-left w-44">
+                    <button class="flex items-center gap-1 font-semibold hover:text-blue-600 transition" data-col="type">
+                        Type <span class="sort-icon text-slate-400">↕</span>
+                    </button>
+                </th>
+                <th class="px-4 py-3 text-left w-32">
+                    <button class="flex items-center gap-1 font-semibold hover:text-blue-600 transition" data-col="cron">
+                        Cron <span class="sort-icon text-slate-400">↕</span>
+                    </button>
+                </th>
+                <th class="px-4 py-3 text-center w-20">
+                    <button class="flex items-center justify-center gap-1 font-semibold hover:text-blue-600 transition w-full" data-col="prio">
+                        Priority <span class="sort-icon text-slate-400">↕</span>
+                    </button>
+                </th>
+                <th class="px-4 py-3 text-center w-20">
+                    <button class="flex items-center justify-center gap-1 font-semibold hover:text-blue-600 transition w-full" data-col="active">
+                        Active <span class="sort-icon text-slate-400">↕</span>
+                    </button>
+                </th>
+                <th class="px-4 py-3 text-left">
+                    <button class="flex items-center gap-1 font-semibold hover:text-blue-600 transition" data-col="dtm">
+                        Last Executed <span class="sort-icon text-slate-400">↕</span>
+                    </button>
+                </th>
+                <th class="px-4 py-3 text-left">
+                    <button class="flex items-center gap-1 font-semibold hover:text-blue-600 transition" data-col="result">
+                        Last Result <span class="sort-icon text-slate-400">↕</span>
+                    </button>
+                </th>
                 <th class="px-4 py-3 text-center w-38">Actions</th>
             </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100">
-            <tr th:each="task : ${tasks}" class="hover:bg-slate-50 transition">
+            <tbody id="taskTableBody" class="divide-y divide-slate-100">
+            <tr th:each="task : ${tasks}"
+                class="hover:bg-slate-50 transition"
+                th:attr="data-id=${task.taskId},data-nm=${task.taskNm},data-type=${task.taskTypeCd},data-cron=${task.scheduleVal},data-prio=${task.taskPrio},data-active=${task.activeYn},data-dtm=${task.lastExecDtm != null ? #temporals.format(task.lastExecDtm, 'yyyy-MM-dd HH:mm:ss') : ''},data-result=${task.lastExecRslt ?: ''},data-search=${#strings.toLowerCase(task.taskNm) + ' ' + #strings.toLowerCase(task.taskTypeCd)}">
                 <td class="px-4 py-3 text-slate-700 font-mono text-xs truncate" th:text="${task.taskId}"></td>
                 <td class="px-4 py-3 font-medium max-w-0">
                     <a th:href="@{|/tasks/${task.taskId}|}" class="text-blue-700 hover:underline block truncate" th:text="${task.taskNm}"></a>
@@ -114,11 +161,137 @@
 
 </main>
 <script>
-    window.addEventListener('pageshow', function(event) {
+(function () {
+    const RESULT_ORDER = { 'ERROR': 0, 'FAILURE': 1, 'SUCCESS': 2, '': 3 };
+    let sortState = { col: null, dir: null }; // null = 초기 정렬 (result → dtm desc)
+    let searchQuery = '';
+
+    function getRows() {
+        return Array.from(document.querySelectorAll('#taskTableBody tr'));
+    }
+
+    function getSortValue(row, col) {
+        switch (col) {
+            case 'id':     return parseInt(row.dataset.id) || 0;
+            case 'nm':     return (row.dataset.nm || '').toLowerCase();
+            case 'type':   return (row.dataset.type || '').toLowerCase();
+            case 'cron':   return (row.dataset.cron || '').toLowerCase();
+            case 'prio':   return parseInt(row.dataset.prio) || 0;
+            case 'active': return (row.dataset.active || '').toLowerCase();
+            case 'dtm':    return row.dataset.dtm || '';
+            case 'result': return RESULT_ORDER[row.dataset.result] ?? 3;
+            default:       return '';
+        }
+    }
+
+    function compare(a, b, col, dir) {
+        const av = getSortValue(a, col);
+        const bv = getSortValue(b, col);
+        let cmp;
+        if (typeof av === 'number' && typeof bv === 'number') {
+            cmp = av - bv;
+        } else {
+            cmp = av < bv ? -1 : av > bv ? 1 : 0;
+        }
+        return dir === 'desc' ? -cmp : cmp;
+    }
+
+    function initialSort(rows) {
+        return [...rows].sort(function (a, b) {
+            const ra = RESULT_ORDER[a.dataset.result] ?? 3;
+            const rb = RESULT_ORDER[b.dataset.result] ?? 3;
+            if (ra !== rb) return ra - rb;
+            // 결과가 같으면 Last Executed 내림차순 (최근 실행 먼저)
+            const da = a.dataset.dtm || '';
+            const db = b.dataset.dtm || '';
+            return da > db ? -1 : da < db ? 1 : 0;
+        });
+    }
+
+    function applyAll() {
+        const tbody = document.getElementById('taskTableBody');
+        const rows = getRows();
+
+        // 1. 정렬
+        const sorted = sortState.col === null
+            ? initialSort(rows)
+            : [...rows].sort(function (a, b) { return compare(a, b, sortState.col, sortState.dir); });
+
+        // 2. DOM 순서 반영
+        sorted.forEach(function (r) { tbody.appendChild(r); });
+
+        // 3. 필터 (show/hide)
+        const q = searchQuery.toLowerCase();
+        let visibleCount = 0;
+        sorted.forEach(function (row) {
+            const match = !q || (row.dataset.search || '').includes(q);
+            row.style.display = match ? '' : 'none';
+            if (match) visibleCount++;
+        });
+
+        // 4. 건수 표시
+        const countEl = document.getElementById('rowCount');
+        if (countEl) {
+            countEl.textContent = q
+                ? visibleCount + ' / ' + rows.length + ' 건'
+                : rows.length + ' 건';
+        }
+    }
+
+    function updateSortIcons() {
+        document.querySelectorAll('.sort-icon').forEach(function (icon) {
+            const btn = icon.closest('[data-col]');
+            if (!btn) return;
+            const col = btn.dataset.col;
+            if (sortState.col === col) {
+                icon.textContent = sortState.dir === 'asc' ? '↑' : '↓';
+                icon.classList.add('text-blue-600');
+                icon.classList.remove('text-slate-400');
+                btn.classList.add('text-blue-600');
+            } else {
+                icon.textContent = '↕';
+                icon.classList.remove('text-blue-600');
+                icon.classList.add('text-slate-400');
+                btn.classList.remove('text-blue-600');
+            }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // 초기 정렬 적용
+        applyAll();
+
+        // 검색
+        document.getElementById('searchInput').addEventListener('input', function () {
+            searchQuery = this.value;
+            applyAll();
+        });
+
+        // 컬럼 정렬 클릭
+        document.querySelectorAll('[data-col]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const col = this.dataset.col;
+                if (sortState.col === col) {
+                    if (sortState.dir === 'asc') {
+                        sortState.dir = 'desc';
+                    } else {
+                        sortState = { col: null, dir: null }; // 초기 정렬로 복귀
+                    }
+                } else {
+                    sortState = { col: col, dir: 'asc' };
+                }
+                updateSortIcons();
+                applyAll();
+            });
+        });
+    });
+
+    window.addEventListener('pageshow', function (event) {
         if (event.persisted) {
             location.reload();
         }
     });
+})();
 </script>
 </body>
 </html>
