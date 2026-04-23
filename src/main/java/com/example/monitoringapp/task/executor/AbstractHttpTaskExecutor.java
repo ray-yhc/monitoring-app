@@ -27,6 +27,16 @@ public abstract class AbstractHttpTaskExecutor implements TaskExecutor {
 
     protected HttpCallResult executeHttp(JsonNode execParam) {
         String url = requiredText(execParam, "url");
+        return executeHttpInternal(url, execParam);
+    }
+
+    protected HttpCallResult executeHttp(String baseUrl, JsonNode execParam) {
+        String uriPath = requiredText(execParam, "uri");
+        String fullUrl = joinBaseUrlAndUri(baseUrl, uriPath);
+        return executeHttpInternal(fullUrl, execParam);
+    }
+
+    private HttpCallResult executeHttpInternal(String url, JsonNode execParam) {
         HttpMethod httpMethod = HttpMethod.valueOf(execParam.path("method").asText("GET"));
         long timeoutMs = execParam.path("timeoutMs").asLong(defaultTimeoutMs);
         URI uri = buildUri(url, execParam.path("queryParams"));
@@ -58,6 +68,12 @@ public abstract class AbstractHttpTaskExecutor implements TaskExecutor {
         }
         long durationMs = Duration.between(start, Instant.now()).toMillis();
         return new HttpCallResult(result.statusCode(), result.body(), durationMs);
+    }
+
+    private String joinBaseUrlAndUri(String baseUrl, String uri) {
+        String base = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        String path = uri.startsWith("/") ? uri : "/" + uri;
+        return base + path;
     }
 
     protected JsonNode readBodyAsJson(String body) {

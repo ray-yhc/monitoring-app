@@ -62,7 +62,7 @@ public enum TaskType {
     ES_LOG_CHECK(
             """
             {
-              "url": "http://localhost:9200/logs-*/_search",
+              "uri": "/logs-*/_search",
               "method": "POST",
               "timeoutMs": 5000,
               "headers": {
@@ -91,7 +91,7 @@ public enum TaskType {
     PROM_QL_CHECK(
             """
             {
-              "url": "http://localhost:9090/api/v1/query",
+              "uri": "/api/v1/query",
               "method": "GET",
               "timeoutMs": 5000,
               "queryParams": {

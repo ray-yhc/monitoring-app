@@ -8,6 +8,8 @@ public class MonitoringProperties {
     private final Scheduler scheduler = new Scheduler();
     private final Execution execution = new Execution();
     private final Alert alert = new Alert();
+    private final Elasticsearch elasticsearch = new Elasticsearch();
+    private final Prometheus prometheus = new Prometheus();
 
     public Scheduler getScheduler() {
         return scheduler;
@@ -19,6 +21,14 @@ public class MonitoringProperties {
 
     public Alert getAlert() {
         return alert;
+    }
+
+    public Elasticsearch getElasticsearch() {
+        return elasticsearch;
+    }
+
+    public Prometheus getPrometheus() {
+        return prometheus;
     }
 
     public static class Scheduler {
@@ -72,6 +82,30 @@ public class MonitoringProperties {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
+        }
+    }
+
+    public static class Elasticsearch {
+        private String baseUrl = "http://localhost:9200";
+
+        public String getBaseUrl() {
+            return baseUrl;
+        }
+
+        public void setBaseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
+        }
+    }
+
+    public static class Prometheus {
+        private String baseUrl = "http://localhost:9090";
+
+        public String getBaseUrl() {
+            return baseUrl;
+        }
+
+        public void setBaseUrl(String baseUrl) {
+            this.baseUrl = baseUrl;
         }
     }
 }

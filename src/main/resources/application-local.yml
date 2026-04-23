@@ -38,6 +38,10 @@ monitoring:
     history-page-size: 20
   alert:
     enabled: true
+  elasticsearch:
+    base-url: ${ES_BASE_URL:http://localhost:9200}
+  prometheus:
+    base-url: ${PROM_BASE_URL:http://localhost:9090}
 
 management:
   endpoints:

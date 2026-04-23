@@ -18,6 +18,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 @Component
 public class EsLogCheckTaskExecutor extends AbstractHttpTaskExecutor {
 
+    private final MonitoringProperties monitoringProperties;
     private final ComparisonEvaluator comparisonEvaluator;
     private final JsonValueExtractor jsonValueExtractor;
 
@@ -29,6 +30,7 @@ public class EsLogCheckTaskExecutor extends AbstractHttpTaskExecutor {
             JsonValueExtractor jsonValueExtractor
     ) {
         super(webClientBuilder, jsonSupport, monitoringProperties.getExecution().getDefaultTimeoutMs());
+        this.monitoringProperties = monitoringProperties;
         this.comparisonEvaluator = comparisonEvaluator;
         this.jsonValueExtractor = jsonValueExtractor;
     }
@@ -40,7 +42,8 @@ public class EsLogCheckTaskExecutor extends AbstractHttpTaskExecutor {
 
     @Override
     public TaskExecutionResult execute(TaskExecutionContext context) {
-        HttpCallResult httpCallResult = executeHttp(context.getExecParam());
+        String baseUrl = monitoringProperties.getElasticsearch().getBaseUrl();
+        HttpCallResult httpCallResult = executeHttp(baseUrl, context.getExecParam());
         JsonNode bodyJson = readBodyAsJson(httpCallResult.body());
         String valuePath = context.getSuccessParam().path("valuePath").asText();
         JsonNode actualNode = jsonValueExtractor.extract(bodyJson, valuePath);

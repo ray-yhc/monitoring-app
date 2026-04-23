@@ -17,7 +17,7 @@
     </h1>
     <form th:if="${formMode != 'create'}" th:action="@{|/tasks/${taskId}/restart|}" method="post" class="inline ml-auto">
         <button type="submit"
-                class="bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-xl transition cursor-pointer">
+                class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium px-4 py-2 rounded-xl transition cursor-pointer">
             ▶ Run Now
         </button>
     </form>

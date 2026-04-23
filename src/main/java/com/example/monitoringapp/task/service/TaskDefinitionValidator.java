@@ -48,7 +48,7 @@ public class TaskDefinitionValidator {
                 requireText(request.getExecParam(), "query");
             }
             case ES_LOG_CHECK -> {
-                requireText(request.getExecParam(), "url");
+                requireText(request.getExecParam(), "uri");
                 requireText(request.getExecParam(), "method");
                 requireNode(request.getExecParam(), "body");
                 requireText(request.getSuccessParam(), "comparison");
@@ -56,7 +56,7 @@ public class TaskDefinitionValidator {
                 requireText(request.getSuccessParam(), "valuePath");
             }
             case PROM_QL_CHECK -> {
-                requireText(request.getExecParam(), "url");
+                requireText(request.getExecParam(), "uri");
                 JsonNode queryParams = requireNode(request.getExecParam(), "queryParams");
                 requireText(queryParams, "query");
                 requireText(request.getSuccessParam(), "comparison");
