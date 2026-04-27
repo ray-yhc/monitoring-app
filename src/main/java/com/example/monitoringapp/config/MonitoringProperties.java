@@ -10,6 +10,7 @@ public class MonitoringProperties {
     private final Alert alert = new Alert();
     private final Elasticsearch elasticsearch = new Elasticsearch();
     private final Prometheus prometheus = new Prometheus();
+    private final Report report = new Report();
 
     public Scheduler getScheduler() {
         return scheduler;
@@ -29,6 +30,10 @@ public class MonitoringProperties {
 
     public Prometheus getPrometheus() {
         return prometheus;
+    }
+
+    public Report getReport() {
+        return report;
     }
 
     public static class Scheduler {
@@ -106,6 +111,27 @@ public class MonitoringProperties {
 
         public void setBaseUrl(String baseUrl) {
             this.baseUrl = baseUrl;
+        }
+    }
+
+    public static class Report {
+        private String schedule = "0 0 9 * * *";
+        private boolean enabled = true;
+
+        public String getSchedule() {
+            return schedule;
+        }
+
+        public void setSchedule(String schedule) {
+            this.schedule = schedule;
+        }
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
         }
     }
 }

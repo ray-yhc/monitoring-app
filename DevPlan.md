@@ -1014,6 +1014,453 @@ public interface AlertNotifier {
 - 구현 착수 전 DDL 파일 위치 및 패키지 구조 확정
 - 이후 실제 개발 시작
 
+---
+
+# Part 2. AI 일일 모니터링 리포트 기능 개발 계획
+
+## 26. 기능 개요
+
+### 26.1 목표
+- 매일 정해진 시간에 지난 24시간의 모니터링 이력을 자동 분석하여 일일 보고서를 생성한다.
+- 보고서에는 실행이력 통계 요약과 Spring AI(ChatGPT) 기반 AI 조언이 포함된다.
+- AI는 `tb_mon_task_hist_l`의 실행 결과 전체를 보고 이슈의 심각성을 스스로 판단한다.
+
+### 26.2 보고서 구성 항목
+1. **실행이력 요약**: "실행이력: 총 _건 (SUCCESS: _건, FAILURE: _건, ERROR: _건, 성공률 __%)"
+2. **AI 조언**: 작업별 이슈 심각도 판단 및 개선 권고
+
+### 26.3 exec_rslt 값의 의미 (기존 도메인 그대로)
+`exec_rslt`는 실행 결과를 나타내는 기술적 분류이며 심각도와 직접 매핑되지 않는다.
+
+| `exec_rslt` 값 | 의미 |
+|---------------|------|
+| `SUCCESS` | 작업이 정상 실행되었고 성공 조건을 충족함 |
+| `FAILURE` | 작업은 정상 실행되었으나 성공 조건을 충족하지 못함 (예: 임계치 초과, 예상 값 불일치) |
+| `ERROR` | 작업 실행 자체가 실패함 (예: JSON 파싱 오류, HTTP 연결 실패, 예외 발생) |
+
+### 26.4 AI가 판단하는 심각도
+심각도는 AI가 이력 데이터를 분석한 결과로, `exec_rslt` 값과 독립적인 개념이다.
+AI는 발생 빈도, 연속성, 영향 범위 등을 종합적으로 고려하여 각 이슈에 심각도를 부여한다.
+
+| 심각도 | 의미 |
+|--------|------|
+| **심각** | 즉각적인 운영 조치가 필요한 수준 |
+| **주의** | 지속 모니터링 및 점검이 필요한 수준 |
+| **일반** | 특이사항 없음 또는 경미한 수준 |
+
+---
+
+## 27. 기술 스택 추가
+
+### 27.1 AI 연동 방식
+별도 서버 없이 기존 Spring Boot 애플리케이션 내에서 Spring AI를 사용하여 ChatGPT API를 호출한다.
+
+**선택 방안: Spring AI (spring-ai-openai-spring-boot-starter)**
+- 기존 Spring Boot 앱에 의존성 추가만으로 ChatGPT 연동 가능
+- `ChatClient`를 통한 구조화된 메시지 전송 및 응답 수신
+- 별도 Python 서버, 별도 프로세스, 별도 배포 없음
+- Spring AI의 Advisor 체인 및 프롬프트 템플릿 기능 활용
+
+### 27.2 추가 Maven 의존성
+```xml
+<dependency>
+    <groupId>org.springframework.ai</groupId>
+    <artifactId>spring-ai-starter-model-openai</artifactId>
+</dependency>
+```
+
+Spring AI BOM을 `dependencyManagement`에 추가:
+```xml
+<dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-bom</artifactId>
+            <version>1.0.0</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+```
+
+### 27.3 application.yml 추가 설정
+```yaml
+spring:
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      chat:
+        options:
+          model: gpt-4o-mini
+          max-tokens: 1500
+
+monitoring:
+  report:
+    schedule: "0 0 9 * * *"   # 매일 오전 9시 실행
+    enabled: true
+```
+
+---
+
+## 28. 전체 아키텍처 설계
+
+### 28.1 실행 흐름
+
+```
+[Spring Scheduler - DailyReportScheduler]
+    매일 정해진 시간 (기본: 오전 9시) 트리거
+    ↓
+[ReportGenerationService]
+    Step 1. tb_mon_task_hist_l 에서 지난 24시간 이력 전체 조회
+    Step 2. task 별 집계 계산 (총 실행 / SUCCESS / FAILURE / ERROR 건수)
+    Step 3. 실행이력 요약 텍스트 생성 (코드 로직)
+    Step 4. AI 프롬프트 컨텍스트 구성 (task별 통계 + 이슈 목록 포함)
+    Step 5. Spring AI ChatClient → ChatGPT API 호출
+    Step 6. AI 응답 수신 (심각도 분류 + 권고사항 포함 텍스트)
+    Step 7. tb_mon_report_l 저장
+    ↓
+[보고서 조회 화면 / REST API]
+```
+
+### 28.2 Spring AI 워크플로우 단계 설계
+
+Spring AI의 순차적 처리 체인으로 구현한다. LangGraph의 노드 개념에 대응하는 단계를 Java 메서드로 구현한다.
+
+| 단계 (Step) | 담당 클래스 | 처리 내용 | 외부 호출 |
+|-------------|------------|----------|-----------|
+| collectData | `ReportDataCollector` | DB 이력 조회, task별 집계 | DB (MyBatis) |
+| buildSummary | `ReportSummaryBuilder` | 실행이력 요약 텍스트 생성 | 없음 |
+| buildPromptContext | `ReportPromptContextBuilder` | AI에게 보낼 구조화된 컨텍스트 생성 | 없음 |
+| callAi | `ReportAiAnalyzer` | Spring AI ChatClient로 ChatGPT 호출 | OpenAI API |
+| compileReport | `ReportGenerationService` | 모든 결과 조합 후 DB 저장 | DB (MyBatis) |
+
+### 28.3 처리 상태 객체 (`ReportAnalysisContext`)
+
+```java
+public class ReportAnalysisContext {
+    private LocalDateTime analysisStartDtm;
+    private LocalDateTime analysisEndDtm;
+    private List<MonitoringTaskHistory> histories;      // 전체 이력
+    private Map<Long, TaskExecutionStats> taskStats;    // task별 집계
+    private String execSummary;                         // 실행이력 요약 텍스트
+    private String promptContext;                       // AI 프롬프트용 컨텍스트
+    private String aiAdvice;                            // ChatGPT 응답
+}
+
+public class TaskExecutionStats {
+    private Long taskId;
+    private String taskNm;
+    private String taskTypeCd;
+    private int totalCnt;
+    private int successCnt;
+    private int failureCnt;    // FAILURE 건수
+    private int errorCnt;      // ERROR 건수
+    private int consecutiveFailureOrError;  // 연속 실패(FAILURE+ERROR) 건수
+}
+```
+
+### 28.4 에러 핸들링 방침
+- OpenAI API 오류 시: `report_status = 'ERROR'`로 저장, 오류 메시지 기록
+- Spring Scheduler는 예외를 삼키고 다음 날 스케줄 유지
+- 수동 재생성 API로 당일 보고서 재시도 가능
+- OpenAI API 키 미설정 시 애플리케이션 기동은 유지하되, 보고서 생성 시 명시적 오류 반환
+
+---
+
+## 29. DB 설계 추가
+
+### 29.1 신규 테이블: `tb_mon_report_l`
+- 목적: 생성된 일일 보고서 저장
+
+#### 컬럼 정의
+- `report_id`: bigint PK
+- `report_dt`: date, 보고서 기준일 (분석 종료 시각의 날짜)
+- `analysis_start_dtm`: timestamp, 분석 대상 시작 시각 (24시간 전)
+- `analysis_end_dtm`: timestamp, 분석 대상 종료 시각
+- `total_exec_cnt`: integer, 총 실행 건수
+- `success_cnt`: integer, SUCCESS 건수
+- `failure_cnt`: integer, FAILURE 건수 (조건 불충족)
+- `error_cnt`: integer, ERROR 건수 (실행 자체 실패)
+- `exec_summary`: text, 실행이력 요약 텍스트 (코드 생성)
+- `ai_advice`: text, AI 조언 전문 (ChatGPT 생성, 심각도 분류 포함)
+- `report_status`: varchar(20), `PENDING` / `SUCCESS` / `ERROR`
+- `error_msg`: varchar(2000), 보고서 생성 실패 시 에러 메시지 (null 허용)
+- `fst_reg_dtm`: timestamp not null
+- `fnl_upt_dtm`: timestamp not null
+
+#### DDL
+```sql
+create table if not exists tb_mon_report_l (
+    report_id           bigint primary key,
+    report_dt           date not null,
+    analysis_start_dtm  timestamp not null,
+    analysis_end_dtm    timestamp not null,
+    total_exec_cnt      integer not null default 0,
+    success_cnt         integer not null default 0,
+    failure_cnt         integer not null default 0,
+    error_cnt           integer not null default 0,
+    exec_summary        text,
+    ai_advice           text,
+    report_status       varchar(20) not null default 'PENDING',
+    error_msg           varchar(2000),
+    fst_reg_dtm         timestamp not null,
+    fnl_upt_dtm         timestamp not null
+);
+
+create index if not exists idx_tb_mon_report_l_01
+    on tb_mon_report_l(report_dt desc);
+
+create index if not exists idx_tb_mon_report_l_02
+    on tb_mon_report_l(report_status, report_dt desc);
+```
+
+### 29.2 기존 테이블 조회 쿼리 추가
+`MonitoringTaskHistoryRepository`에 다음 쿼리 추가:
+- `findAllByExecDtmBetween(LocalDateTime start, LocalDateTime end)`: 기간 내 전체 이력 조회
+- `countStatsByTask(LocalDateTime start, LocalDateTime end)`: task별 SUCCESS/FAILURE/ERROR 건수 집계
+
+---
+
+## 30. API 설계 추가
+
+### 30.1 신규 REST API 목록
+- `POST /api/v1/monitoring-app/reports/generate` — 보고서 수동 생성 트리거
+- `GET /api/v1/monitoring-app/reports` — 보고서 목록 조회 (페이징)
+- `GET /api/v1/monitoring-app/reports/{reportId}` — 보고서 상세 조회
+- `GET /api/v1/monitoring-app/reports/latest` — 최신 보고서 조회
+
+### 30.2 보고서 상세 응답 예시
+```json
+{
+  "reportId": 1,
+  "reportDt": "2026-04-27",
+  "analysisStartDtm": "2026-04-26T09:00:00",
+  "analysisEndDtm": "2026-04-27T09:00:00",
+  "totalExecCnt": 1440,
+  "successCnt": 1320,
+  "failureCnt": 100,
+  "errorCnt": 20,
+  "execSummary": "실행이력: 총 1,440건 (SUCCESS: 1,320건, FAILURE: 100건, ERROR: 20건, 성공률 91.7%)",
+  "aiAdvice": "1. [심각] Module-A DB Query Check...\n2. [주의] Local Health Check...",
+  "reportStatus": "SUCCESS",
+  "fstRegDtm": "2026-04-27T09:01:35"
+}
+```
+
+### 30.3 수동 생성 요청
+```json
+{
+  "targetDt": "2026-04-27"
+}
+```
+- `targetDt` 생략 시 오늘 날짜 기준 지난 24시간으로 자동 설정
+- 동일 날짜 보고서가 이미 존재하면 덮어쓰기 (재생성)
+
+---
+
+## 31. Spring AI ChatGPT 연동 설계
+
+### 31.1 ChatClient 구성
+```java
+@Bean
+public ChatClient chatClient(ChatClient.Builder builder) {
+    return builder
+        .defaultSystem("""
+            당신은 IT 시스템 모니터링 전문가입니다.
+            제공된 모니터링 이력 데이터를 분석하여 운영자를 위한 한국어 조언을 작성하세요.
+            각 이슈에 대해 심각도([심각] / [주의] / [일반])를 직접 판단하여 표시하세요.
+            심각도 판단 기준: 발생 빈도, 연속성, 시스템 영향도를 종합적으로 고려하세요.
+            """)
+        .build();
+}
+```
+
+### 31.2 프롬프트 컨텍스트 구성 방침
+
+`ReportPromptContextBuilder`가 다음 내용을 포함한 텍스트를 생성하여 ChatGPT에 전달한다.
+
+```
+분석 기간: {analysisStartDtm} ~ {analysisEndDtm}
+
+[작업별 실행 통계]
+- {taskNm} ({taskTypeCd})
+  총 {totalCnt}건 실행 | SUCCESS: {successCnt}건 | FAILURE: {failureCnt}건 | ERROR: {errorCnt}건
+  연속 비정상(FAILURE+ERROR): {consecutiveFailureOrError}건
+
+...
+
+[참고: exec_rslt 값의 의미]
+- SUCCESS: 성공 조건 충족
+- FAILURE: 작업은 실행되었으나 성공 조건 불충족 (임계치 초과, 값 불일치 등)
+- ERROR: 작업 실행 자체 실패 (연결 오류, JSON 파싱 실패, 예외 등)
+
+위 데이터를 바탕으로 각 작업에 대한 심각도와 개선 권고를 작성하세요.
+이슈가 없는 작업은 생략하고, 이슈가 있는 작업만 번호 목록으로 작성하세요.
+전체적으로 이슈가 없으면 "지난 24시간 내 특이사항이 없습니다."라고 답변하세요.
+```
+
+### 31.3 출력 형식 지침
+- 이슈 있는 경우: 번호 목록으로 작성, 작업별 1개 항목
+  - `1. [심각] {taskNm}: {원인 설명 및 권고 조치}`
+  - `2. [주의] {taskNm}: {원인 설명 및 권고 조치}`
+- 이슈 없는 경우: "지난 24시간 내 특이사항이 없습니다."
+- 응답 최대 토큰: 1,500
+- 모델: `gpt-4o-mini` (설정으로 변경 가능)
+
+---
+
+## 32. Java 측 신규 컴포넌트 설계
+
+### 32.1 신규 패키지 및 클래스
+
+#### `report` 패키지
+- `DailyReportScheduler`: Spring Scheduler 기반 일일 트리거
+- `ReportGenerationService`: Step 전체 오케스트레이션, 저장 처리
+
+#### `report.step` 패키지
+- `ReportDataCollector`: DB에서 이력 조회 및 task별 통계 집계
+- `ReportSummaryBuilder`: 실행이력 요약 텍스트 생성 (코드 로직)
+- `ReportPromptContextBuilder`: AI 프롬프트용 컨텍스트 텍스트 구성
+- `ReportAiAnalyzer`: Spring AI `ChatClient` 호출, 응답 수신
+
+#### `report.domain`
+- `ReportAnalysisContext`: 단계 간 공유되는 처리 상태 객체
+- `TaskExecutionStats`: task별 집계 DTO
+
+#### `report.repository`
+- `MonitoringReportRepository`: `tb_mon_report_l` CRUD MyBatis 매퍼
+
+#### `report.rest`
+- `MonitoringReportRestController`: 보고서 조회 및 수동 생성 API
+
+#### `report.web`
+- `MonitoringReportPageController`: 보고서 목록/상세 Thymeleaf 페이지
+
+#### `report.service.dto`
+- `ReportGenerateRequest`: 수동 생성 요청 DTO
+- `MonitoringReportResponse`: 보고서 상세 응답 DTO
+- `MonitoringReportSummaryResponse`: 목록용 요약 DTO
+
+### 32.2 `MonitoringProperties` 확장
+```java
+// 기존 MonitoringProperties에 report 설정 추가
+private Report report = new Report();
+
+public static class Report {
+    private String schedule = "0 0 9 * * *";
+    private boolean enabled = true;
+}
+```
+
+---
+
+## 33. 화면 설계 추가
+
+### 33.1 신규 화면 목록
+
+| 화면 | URL | 설명 |
+|------|-----|------|
+| 보고서 목록 | `/reports` | 날짜별 보고서 목록, 생성 상태 표시 |
+| 보고서 상세 | `/reports/{reportId}` | 실행이력 요약 + AI 조언 전문 |
+
+### 33.2 보고서 목록 화면 표시 항목
+- 보고서 날짜 (`report_dt`)
+- 분석 기간 (`analysis_start_dtm` ~ `analysis_end_dtm`)
+- 총 실행 건수 / FAILURE 건수 / ERROR 건수
+- 생성 상태 (`report_status`: SUCCESS / ERROR / PENDING)
+- 상세 보기 링크
+
+### 33.3 보고서 상세 화면 표시 항목
+- 분석 기간 및 집계 숫자 (카드 형태, SUCCESS / FAILURE / ERROR 구분 표시)
+- 실행이력 요약 텍스트 섹션
+- AI 조언 섹션 (줄바꿈 보존, `[심각]` / `[주의]` / `[일반]` 태그 하이라이트)
+- 수동 재생성 버튼
+
+### 33.4 화면 라우트 추가
+- `GET /reports`
+- `GET /reports/{reportId}`
+- `POST /reports/generate` (폼 제출 방식 수동 생성)
+
+---
+
+## 34. 단계별 개발 계획 (Part 2)
+
+### Phase R1. 기반 구성
+- 작업
+  - `pom.xml`에 Spring AI BOM 및 `spring-ai-starter-model-openai` 의존성 추가
+  - `application.yml`에 OpenAI 설정 및 report 스케줄 설정 추가
+  - `ChatClient` Bean 설정 클래스 작성 (시스템 프롬프트 포함)
+  - `tb_mon_report_l` DDL 확정 및 작성
+  - `MonitoringReportRepository` 및 MyBatis 매퍼 XML 작성
+  - `ReportAnalysisContext`, `TaskExecutionStats` 도메인 클래스 작성
+- 완료 기준
+  - Spring AI 의존성이 추가되어 앱이 정상 기동된다.
+  - `tb_mon_report_l` 테이블이 생성된다.
+
+### Phase R2. 처리 단계 구현
+- 작업
+  - `MonitoringTaskHistoryRepository`에 기간 조회 및 통계 집계 쿼리 추가
+  - `ReportDataCollector` 구현 (DB 조회 + `TaskExecutionStats` 집계)
+  - `ReportSummaryBuilder` 구현 (실행이력 요약 텍스트 생성)
+  - `ReportPromptContextBuilder` 구현 (AI 프롬프트 컨텍스트 생성)
+  - `ReportAiAnalyzer` 구현 (Spring AI `ChatClient` 호출)
+  - `ReportGenerationService` 오케스트레이션 구현
+  - `DailyReportScheduler` 구현
+- 완료 기준
+  - 스케줄러 실행 시 DB 이력을 수집하고 ChatGPT를 호출하여 보고서를 저장한다.
+  - OpenAI API 오류 시 `ERROR` 상태로 저장되고 스케줄러가 계속 유지된다.
+
+### Phase R3. API 및 화면 구현
+- 작업
+  - `MonitoringReportRestController` 구현 (목록, 상세, 수동 생성)
+  - `MonitoringReportPageController` 구현
+  - 보고서 목록, 상세 Thymeleaf 화면 구현
+  - `[심각]` / `[주의]` / `[일반]` 태그 하이라이트 CSS 적용
+  - 수동 생성 폼 및 재생성 버튼 구현
+- 완료 기준
+  - 화면에서 보고서 목록 조회 및 상세 내용 확인이 가능하다.
+  - 수동 생성 버튼으로 즉시 보고서를 생성할 수 있다.
+
+### Phase R4. 안정화 및 정리
+- 작업
+  - 당일 중복 보고서 생성 방지 로직 (스케줄러 중복 실행 방지, 수동 재생성은 허용)
+  - OpenAI Rate Limit / Timeout 예외 처리
+  - 테스트 코드 작성 (`ReportAiAnalyzer` mock 기반, `ReportSummaryBuilder` 단위 테스트)
+- 완료 기준
+  - 스케줄러가 이미 당일 보고서를 생성한 경우 중복 실행하지 않는다.
+  - OpenAI API 키 없이도 앱이 정상 기동된다 (보고서 생성 시 명시적 오류만 발생).
+
+---
+
+## 35. 보고서 예시
+
+### 35.1 실행이력 요약 예시 (코드 생성)
+```
+실행이력: 총 1,440건 (SUCCESS: 1,320건, FAILURE: 100건, ERROR: 20건, 성공률 91.7%)
+```
+
+### 35.2 AI 조언 예시 (ChatGPT 생성)
+```
+1. [심각] Module-A DB Query Check: 지난 24시간 중 15회 ERROR가 발생했으며, 오전 2시~4시 사이
+   에 집중되어 있습니다. DB 연결 설정 또는 해당 시간대의 네트워크 경로를 점검하시기 바랍니다.
+
+2. [주의] Local Health Check: 반복적인 FAILURE가 관찰됩니다. 성공 조건으로 설정된 임계치가
+   실제 운영 환경과 맞지 않을 가능성이 있습니다. alert rule 기준치 재검토를 권고합니다.
+
+3. [주의] Prometheus PromQL Check: 간헐적 ERROR가 발생하고 있습니다. Prometheus 엔드포인트
+   의 가용성을 확인하고 모니터링 호출 로직을 점검하세요.
+```
+
+---
+
+## 36. Part 2 추가 확정 필요 항목
+- OpenAI 모델 선택: `gpt-4o-mini` vs `gpt-4o` (비용/품질 트레이드오프)
+- OpenAI API 키 관리 방식: 환경 변수 / Secret Manager / application.yml 암호화
+- 보고서 생성 스케줄 기본값 및 런타임 변경 가능 여부
+- 보고서 보존 기간 정책 (오래된 보고서 자동 삭제 여부)
+- AI 조언 없이 통계 요약만 저장하는 경량 모드 지원 여부 (OpenAI 비용 절감 목적)
+
 ## 26. Report Group 연계 기능 추가 계획
 
 ### 26.1 목표 및 범위

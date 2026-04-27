@@ -78,3 +78,26 @@ create index if not exists idx_tb_mon_report_group_m_01
 
 create index if not exists idx_tb_mon_task_report_group_r_01
     on tb_mon_task_report_group_r(report_group_id, task_id);
+
+create table if not exists tb_mon_report_l (
+    report_id           bigint primary key,
+    report_dt           date not null,
+    analysis_start_dtm  timestamp not null,
+    analysis_end_dtm    timestamp not null,
+    total_exec_cnt      integer not null default 0,
+    success_cnt         integer not null default 0,
+    failure_cnt         integer not null default 0,
+    error_cnt           integer not null default 0,
+    exec_summary        text,
+    ai_advice           text,
+    report_status       varchar(20) not null default 'PENDING',
+    error_msg           varchar(2000),
+    fst_reg_dtm         timestamp not null,
+    fnl_upt_dtm         timestamp not null
+);
+
+create index if not exists idx_tb_mon_report_l_01
+    on tb_mon_report_l(report_dt desc);
+
+create index if not exists idx_tb_mon_report_l_02
+    on tb_mon_report_l(report_status, report_dt desc);

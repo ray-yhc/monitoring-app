@@ -1,11 +1,13 @@
 package com.example.monitoringapp.task.repository.defaultdb;
 
+import com.example.monitoringapp.report.domain.TaskExecutionStats;
 import com.example.monitoringapp.task.domain.MonitoringTaskHistory;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
@@ -69,4 +71,26 @@ public interface MonitoringTaskHistoryRepository {
 
     @Select("select count(*) from tb_mon_task_hist_l where task_id = #{taskId}")
     long countByTaskId(@Param("taskId") Long taskId);
+
+    @Select("""
+            select
+                h.task_id,
+                m.task_nm,
+                m.task_type_cd,
+                count(*) as total_cnt,
+                sum(case when h.exec_rslt = 'SUCCESS' then 1 else 0 end) as success_cnt,
+                sum(case when h.exec_rslt = 'FAILURE' then 1 else 0 end) as failure_cnt,
+                sum(case when h.exec_rslt = 'ERROR'   then 1 else 0 end) as error_cnt
+            from tb_mon_task_hist_l h
+            join tb_mon_task_m m on h.task_id = m.task_id
+            where h.exec_dtm >= #{startDtm} and h.exec_dtm < #{endDtm}
+            group by h.task_id, m.task_nm, m.task_type_cd
+            order by
+                sum(case when h.exec_rslt = 'ERROR'   then 1 else 0 end) +
+                sum(case when h.exec_rslt = 'FAILURE' then 1 else 0 end) desc
+            """)
+    List<TaskExecutionStats> countStatsByTask(
+            @Param("startDtm") LocalDateTime startDtm,
+            @Param("endDtm") LocalDateTime endDtm
+    );
 }

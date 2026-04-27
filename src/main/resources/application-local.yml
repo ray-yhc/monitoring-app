@@ -28,6 +28,13 @@ spring:
       password: ${MONITORING_APP_PASSWORD:admin1234}
   thymeleaf:
     cache: false
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: gpt-4o-mini
+          max-tokens: 1500
 
 monitoring:
   scheduler:
@@ -42,6 +49,9 @@ monitoring:
     base-url: ${ES_BASE_URL:http://localhost:9200}
   prometheus:
     base-url: ${PROM_BASE_URL:http://localhost:9090}
+  report:
+    schedule: "0 0 9 * * *"
+    enabled: true
 
 management:
   endpoints:
