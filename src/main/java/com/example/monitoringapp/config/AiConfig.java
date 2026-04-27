@@ -1,11 +1,51 @@
 package com.example.monitoringapp.config;
 
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.ReactorClientHttpRequestFactory;
+import org.springframework.web.client.RestClient;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.transport.ProxyProvider;
 
 @Configuration
 public class AiConfig {
+
+    @Value("${spring.ai.openai.proxy.host:}")
+    private String proxyHost;
+
+    @Value("${spring.ai.openai.proxy.port:0}")
+    private int proxyPort;
+
+    @Value("${spring.ai.openai.proxy.insecure:false}")
+    private boolean proxyInsecure;
+
+    @Bean
+    public RestClient.Builder restClientBuilder() {
+        HttpClient httpClient = HttpClient.create();
+        if (!proxyHost.isBlank()) {
+            httpClient = httpClient.proxy(proxy -> proxy
+                    .type(ProxyProvider.Proxy.HTTP)
+                    .host(proxyHost)
+                    .port(proxyPort)
+            );
+        }
+        if (proxyInsecure) {
+            try {
+                var sslContext = SslContextBuilder.forClient()
+                        .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                        .build();
+                httpClient = httpClient.secure(spec -> spec.sslContext(sslContext));
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to configure insecure SSL context", e);
+            }
+        }
+        return RestClient.builder()
+                .requestFactory(new ReactorClientHttpRequestFactory(httpClient));
+    }
 
     @Bean
     public ChatClient reportChatClient(ChatClient.Builder builder) {

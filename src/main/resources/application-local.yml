@@ -31,6 +31,10 @@ spring:
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:}
+      proxy:
+        host: ${OPENAI_PROXY_HOST:70.10.15.10}
+        port: ${OPENAI_PROXY_PORT:8080}
+        insecure: true  # 회사 프록시 SSL 인스펙션 우회 (로컬 개발용)
       chat:
         options:
           model: gpt-4o-mini
